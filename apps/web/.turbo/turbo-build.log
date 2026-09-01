@@ -1,0 +1,26 @@
+$ next build
+   ▲ Next.js 15.5.24
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 5.4s
+   Linting and checking validity of types ...
+Failed to compile.
+
+.next/types/app/layout.ts:34:31
+Type error: Type '{ children: ReactNode; }' does not satisfy the constraint 'LayoutProps'.
+  Types of property 'children' are incompatible.
+    Type 'import("C:/Users/polar/Documents/antigravity/valiant-mendeleev/node_modules/.pnpm/@types+react@19.2.18/node_modules/@types/react/index").ReactNode' is not assignable to type 'React.ReactNode'.
+      Type 'ReactElement<unknown, string | JSXElementConstructor<any>>' is not assignable to type 'ReactNode'.
+        Property 'children' is missing in type 'ReactElement<unknown, string | JSXElementConstructor<any>>' but required in type 'ReactPortal'.
+
+[0m [90m 32 |[39m
+ [90m 33 |[39m [90m// Check the prop type of the entry function[39m
+[31m[1m>[22m[39m[90m 34 |[39m checkFields[33m<[39m[33mDiff[39m[33m<[39m[33mLayoutProps[39m[33m,[39m [33mFirstArg[39m[33m<[39m[33mTEntry[39m[[32m'default'[39m][33m>[39m[33m,[39m [32m'default'[39m[33m>>[39m()
+ [90m    |[39m                               [31m[1m^[22m[39m
+ [90m 35 |[39m
+ [90m 36 |[39m [90m// Check the arguments and return type of the generateMetadata function[39m
+ [90m 37 |[39m [36mif[39m ([32m'generateMetadata'[39m [36min[39m entry) {[0m
+Next.js build worker exited with code: 1 and signal: null
+[ELIFECYCLE] Command failed with exit code 1.
