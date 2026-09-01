@@ -45,8 +45,8 @@ export const updateBudgetLimitToolSchema = z.object({
 export const createCategoryToolSchema = z.object({
   name: z.string().min(1),
   kind: z.enum(['expense', 'income']),
-  icon: z.string().default('💰'),
-  color: z.string().default('#64748b'),
+  icon: z.string().default('tag'),
+  color: z.string().default('#5C6B7A'),
   budgetStyle: z.enum(['envelope', 'flex', 'fixed']).default('flex'),
 });
 
