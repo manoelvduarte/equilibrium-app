@@ -36,9 +36,9 @@ export function InvitePartnerModal({ isOpen, onClose, userProfile }: InvitePartn
 
       const { error: insertError } = await supabase.from('invites').insert({
         household_id: userProfile.household_id,
-        email: invitedEmail || null,
+        created_by: userProfile.id,
+        email: invitedEmail || 'parceiro@equilibrium.app',
         token: generatedToken,
-        role: 'partner',
         expires_at: expiresAt.toISOString(),
       });
 

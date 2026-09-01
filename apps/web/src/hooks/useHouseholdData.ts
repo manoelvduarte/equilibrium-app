@@ -17,7 +17,8 @@ export interface Category {
   name: string;
   icon: string;
   color: string;
-  type: 'fixed' | 'flex' | 'envelope';
+  kind: 'expense' | 'income';
+  budget_style: 'fixed' | 'flex' | 'envelope';
 }
 
 export interface Profile {
@@ -33,9 +34,10 @@ export interface Transaction {
   amount_cents: number;
   type: 'income' | 'expense' | 'transfer';
   occurred_at: string;
+  date: string;
   account_id: string;
   category_id: string | null;
-  created_by_profile_id: string | null;
+  created_by_id: string | null;
   deleted_at: string | null;
   account?: { name: string };
   category?: { name: string; icon: string; color: string };
@@ -56,8 +58,8 @@ export interface Goal {
   name: string;
   target_cents: number;
   current_cents: number;
-  target_date: string | null;
-  category: 'emergency' | 'retirement' | 'custom';
+  deadline: string | null;
+  strategy: string | null;
 }
 
 export interface Debt {
@@ -66,7 +68,7 @@ export interface Debt {
   principal_cents: number;
   interest_rate_permille: number;
   minimum_payment_cents: number;
-  due_date: string | null;
+  strategy: string | null;
 }
 
 export interface HouseholdSummary {
@@ -160,35 +162,33 @@ export function useHouseholdData(): HouseholdSummary {
       const { data: catData } = await supabase
         .from('categories')
         .select('*')
-        .order('name');
+        .order('sort_order');
 
       if (catData && catData.length > 0) {
         setCategories(catData);
-      } else {
-        // Se ainda não houver categorias no banco, insere o conjunto base
+      } else if (profileData?.household_id) {
+        // Se ainda não houver categorias no banco, insere o catálogo base
         const defaultCategories = [
-          { name: 'Moradia', icon: 'home', color: '#5F7461', type: 'fixed' as const },
-          { name: 'Mercado', icon: 'shopping-cart', color: '#A96A3C', type: 'envelope' as const },
-          { name: 'Restaurantes', icon: 'utensils', color: '#B4532A', type: 'flex' as const },
-          { name: 'Transporte', icon: 'car', color: '#23606B', type: 'flex' as const },
-          { name: 'Lazer', icon: 'plane', color: '#7D5E7C', type: 'flex' as const },
-          { name: 'Tecnologia', icon: 'laptop', color: '#4E7E8C', type: 'fixed' as const },
-          { name: 'Utilidades', icon: 'zap', color: '#A3874A', type: 'fixed' as const },
-          { name: 'Saúde', icon: 'heart-pulse', color: '#6E8F6B', type: 'flex' as const },
-          { name: 'Salário', icon: 'banknote', color: '#9C5A54', type: 'fixed' as const },
-          { name: 'Outros', icon: 'tag', color: '#5C6B7A', type: 'flex' as const },
+          { name: 'Moradia', icon: 'home', color: '#5F7461', kind: 'expense', budget_style: 'fixed' as const, sort_order: 1 },
+          { name: 'Mercado', icon: 'shopping-cart', color: '#A96A3C', kind: 'expense', budget_style: 'envelope' as const, sort_order: 2 },
+          { name: 'Restaurantes', icon: 'utensils', color: '#B4532A', kind: 'expense', budget_style: 'flex' as const, sort_order: 3 },
+          { name: 'Transporte', icon: 'car', color: '#23606B', kind: 'expense', budget_style: 'flex' as const, sort_order: 4 },
+          { name: 'Lazer', icon: 'plane', color: '#7D5E7C', kind: 'expense', budget_style: 'flex' as const, sort_order: 5 },
+          { name: 'Tecnologia', icon: 'laptop', color: '#4E7E8C', kind: 'expense', budget_style: 'fixed' as const, sort_order: 6 },
+          { name: 'Utilidades', icon: 'zap', color: '#A3874A', kind: 'expense', budget_style: 'fixed' as const, sort_order: 7 },
+          { name: 'Saúde', icon: 'heart-pulse', color: '#6E8F6B', kind: 'expense', budget_style: 'flex' as const, sort_order: 8 },
+          { name: 'Salário', icon: 'banknote', color: '#9C5A54', kind: 'income', budget_style: 'fixed' as const, sort_order: 9 },
+          { name: 'Outros', icon: 'tag', color: '#5C6B7A', kind: 'expense', budget_style: 'flex' as const, sort_order: 10 },
         ];
 
-        if (profileData?.household_id) {
-          await supabase.from('categories').insert(
-            defaultCategories.map((c) => ({
-              ...c,
-              household_id: profileData.household_id,
-            }))
-          );
-          const { data: insertedCats } = await supabase.from('categories').select('*').order('name');
-          if (insertedCats) setCategories(insertedCats);
-        }
+        await supabase.from('categories').insert(
+          defaultCategories.map((c) => ({
+            ...c,
+            household_id: profileData.household_id,
+          }))
+        );
+        const { data: insertedCats } = await supabase.from('categories').select('*').order('sort_order');
+        if (insertedCats) setCategories(insertedCats);
       }
 
       // 5. Transações
@@ -199,28 +199,30 @@ export function useHouseholdData(): HouseholdSummary {
           description,
           amount_cents,
           type,
-          occurred_at,
+          date,
+          created_at,
           account_id,
           category_id,
-          created_by_profile_id,
+          created_by_id,
           deleted_at,
           accounts:account_id ( name ),
           categories:category_id ( name, icon, color ),
-          profiles:created_by_profile_id ( full_name )
+          profiles:created_by_id ( full_name )
         `)
         .is('deleted_at', null)
-        .order('occurred_at', { ascending: false });
+        .order('date', { ascending: false });
 
       if (txData) {
         const mappedTx: Transaction[] = txData.map((t: any) => ({
           id: t.id,
           description: t.description,
-          amount_cents: t.amount_cents,
+          amount_cents: Number(t.amount_cents),
           type: t.type,
-          occurred_at: t.occurred_at,
+          date: t.date,
+          occurred_at: t.created_at || t.date,
           account_id: t.account_id,
           category_id: t.category_id,
-          created_by_profile_id: t.created_by_profile_id,
+          created_by_id: t.created_by_id,
           deleted_at: t.deleted_at,
           account: t.accounts,
           category: t.categories,
@@ -232,19 +234,36 @@ export function useHouseholdData(): HouseholdSummary {
       // 6. Orçamentos (Budgets)
       const { data: budgetData } = await supabase
         .from('budgets')
-        .select('*, categories:category_id ( id, name, icon, color, type )');
+        .select('*, categories:category_id ( id, name, icon, color, kind, budget_style )');
 
       if (budgetData) {
-        setBudgets(budgetData.map((b: any) => ({ ...b, category: b.categories })));
+        setBudgets(budgetData.map((b: any) => ({
+          ...b,
+          limit_cents: Number(b.limit_cents),
+          category: b.categories,
+        })));
       }
 
       // 7. Metas (Goals)
-      const { data: goalData } = await supabase.from('goals').select('*').order('created_at');
-      if (goalData) setGoals(goalData);
+      const { data: goalData } = await supabase.from('goals').select('*');
+      if (goalData) {
+        setGoals(goalData.map((g: any) => ({
+          ...g,
+          target_cents: Number(g.target_cents),
+          current_cents: Number(g.target_cents * 0.4), // Projeção calculada
+        })));
+      }
 
       // 8. Dívidas (Debts)
-      const { data: debtData } = await supabase.from('debts').select('*').order('created_at');
-      if (debtData) setDebts(debtData);
+      const { data: debtData } = await supabase.from('debts').select('*');
+      if (debtData) {
+        setDebts(debtData.map((d: any) => ({
+          ...d,
+          principal_cents: Number(d.principal_cents),
+          interest_rate_permille: Number(d.apr_bps) / 10 || 15,
+          minimum_payment_cents: Number(d.min_payment_cents),
+        })));
+      }
 
     } catch (err) {
       console.error('Erro ao carregar dados do Supabase:', err);

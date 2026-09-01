@@ -86,11 +86,11 @@ export function QuickAddModal({
         household_id: userProfile.household_id,
         account_id: activeAccountId,
         category_id: activeCategoryId || null,
-        created_by_profile_id: userProfile.id,
+        created_by_id: userProfile.id,
         description: parsedDesc || inputStr || 'Despesa rápida',
         amount_cents: parsedCents,
         type: type,
-        occurred_at: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
       });
 
       if (insertError) throw insertError;

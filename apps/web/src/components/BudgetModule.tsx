@@ -56,9 +56,9 @@ export function BudgetModule({
   const totalBudgetSpent = budgetCategories.reduce((acc, c) => acc + c.spentCents, 0);
   const totalPercentage = Math.min(100, Math.round((totalBudgetSpent / totalBudgetLimit) * 100));
 
-  const envelopeCategories = budgetCategories.filter((c) => c.type === 'envelope');
-  const flexCategories = budgetCategories.filter((c) => c.type === 'flex');
-  const fixedCategories = budgetCategories.filter((c) => c.type === 'fixed');
+  const envelopeCategories = budgetCategories.filter((c) => c.budget_style === 'envelope');
+  const flexCategories = budgetCategories.filter((c) => c.budget_style === 'flex');
+  const fixedCategories = budgetCategories.filter((c) => c.budget_style === 'fixed');
 
   return (
     <div className="space-y-8">

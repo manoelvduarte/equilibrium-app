@@ -81,11 +81,11 @@ export function TransactionsModule({
         household_id: userProfile.household_id,
         account_id: accountId,
         category_id: categoryId || null,
-        created_by_profile_id: userProfile.id,
+        created_by_id: userProfile.id,
         description,
         amount_cents: cents,
         type,
-        occurred_at: new Date(occurredAt).toISOString(),
+        date: occurredAt,
       });
 
       if (insertError) throw insertError;
