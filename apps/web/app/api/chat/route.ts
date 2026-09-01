@@ -1,6 +1,6 @@
 import { streamText } from 'ai';
 import { google } from '@ai-sdk/google';
-import { createClient } from '@/lib/supabase/server';
+import { getUserFromRequest } from '@/lib/ai/auth';
 import { createAssistantTools } from '@/lib/ai/tools';
 
 export const runtime = 'nodejs';
@@ -16,26 +16,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // 2. Autenticação e Carregamento do Usuário sob JWT
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  // 2. Autenticação Híbrida (Bearer Token Mobile ou Cookies Web)
+  const authContext = await getUserFromRequest(req);
+  if (!authContext) {
     return Response.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, full_name, household_id')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.household_id) {
-    return Response.json({ error: 'Household não encontrado' }, { status: 400 });
-  }
-
+  const { supabase, profile, user } = authContext;
   const { messages } = await req.json();
 
   // 3. Coleta de Contexto Real Dinâmico do Household
