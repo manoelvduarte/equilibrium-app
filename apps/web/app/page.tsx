@@ -9,6 +9,7 @@ import { BudgetModule } from '@/components/BudgetModule';
 import { GoalsDebtsModule } from '@/components/GoalsDebtsModule';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { InvitePartnerModal } from '@/components/InvitePartnerModal';
+import { AssistantDrawer } from '@/components/assistant/AssistantDrawer';
 import { LayoutDashboard, Receipt, PieChart, Target } from 'lucide-react';
 
 export default function HomePage() {
@@ -198,6 +199,9 @@ export default function HomePage() {
         onClose={() => setIsInviteOpen(false)}
         userProfile={userProfile}
       />
+
+      {/* Assistente IA Real com Tool Calling e Aprovação Humana */}
+      <AssistantDrawer onActionExecuted={refetch} />
 
     </div>
   );
