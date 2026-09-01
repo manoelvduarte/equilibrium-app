@@ -31,6 +31,7 @@ export function AssistantDrawer({ onActionExecuted }: AssistantDrawerProps) {
     handleSubmit,
     addToolResult,
     setMessages,
+    append,
     isLoading,
     error,
   } = useChat({
@@ -79,18 +80,11 @@ export function AssistantDrawer({ onActionExecuted }: AssistantDrawerProps) {
   };
 
   const handleSuggestionClick = (text: string) => {
-    const fakeEvent = {
-      preventDefault: () => {},
-    } as React.FormEvent;
-
-    handleInputChange({
-      target: { value: text },
-    } as any);
-
-    setTimeout(() => {
-      saveUserMessage(text).catch(console.error);
-      handleSubmit(fakeEvent);
-    }, 50);
+    saveUserMessage(text).catch(console.error);
+    append({
+      role: 'user',
+      content: text,
+    });
   };
 
   return (
