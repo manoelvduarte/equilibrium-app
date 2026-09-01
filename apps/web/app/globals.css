@@ -1,18 +1,130 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --background: #020617;
-    --foreground: #f8fafc;
-  }
+@custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --paper: #FAF8F4;
+  --surface: #FFFFFF;
+  --surface-2: #F1EDE6;
+  --ink: #1C1917;
+  --ink-2: #5C564D;
+  --ink-3: #877F73;
+  --hairline: #E7E2D9;
+  --brand: #1E5C43;
+  --brand-text: #1E5C43;
+  --partner-a: #B4532A;
+  --partner-b: #23606B;
+  --danger: #B3362B;
+  --warning: #A66A21;
+
+  --cat-1: #5F7461;
+  --cat-2: #A96A3C;
+  --cat-3: #B4532A;
+  --cat-4: #23606B;
+  --cat-5: #7D5E7C;
+  --cat-6: #4E7E8C;
+  --cat-7: #A3874A;
+  --cat-8: #6E8F6B;
+  --cat-9: #9C5A54;
+  --cat-10: #5C6B7A;
+}
+
+.dark {
+  --paper: #151310;
+  --surface: #1C1915;
+  --surface-2: #242019;
+  --ink: #F2EFE9;
+  --ink-2: #C0BAB0;
+  --ink-3: #8A8478;
+  --hairline: #2A261F;
+  --brand: #1E5C43;
+  --brand-text: #8FC7A9;
+  --partner-a: #C6683E;
+  --partner-b: #3A7B87;
+  --danger: #D9483B;
+  --warning: #C7832D;
+
+  --cat-1: #6E8570;
+  --cat-2: #BD7744;
+  --cat-3: #C6683E;
+  --cat-4: #3A7B87;
+  --cat-5: #8F6D8E;
+  --cat-6: #5C91A1;
+  --cat-7: #B89954;
+  --cat-8: #7EA17B;
+  --cat-9: #AD655E;
+  --cat-10: #6B7B8B;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-hairline: var(--hairline);
+  --color-brand: var(--brand);
+  --color-brand-text: var(--brand-text);
+  --color-partner-a: var(--partner-a);
+  --color-partner-b: var(--partner-b);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
+  --color-cat-7: var(--cat-7);
+  --color-cat-8: var(--cat-8);
+  --color-cat-9: var(--cat-9);
+  --color-cat-10: var(--cat-10);
+
+  --font-display: var(--font-fraunces), serif;
+  --font-sans: var(--font-plex-sans), sans-serif;
+  --font-mono: var(--font-plex-mono), monospace;
+
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-10: 10px;
+  --radius-12: 12px;
+}
+
+@layer base {
   body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-plex-sans), sans-serif;
     margin: 0;
     padding: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Forçar numerais tabulares em toda a interface financeira */
+  .tnum,
+  td,
+  th,
+  input[type="number"],
+  [data-tabular-numbers] {
+    font-feature-settings: "tnum" on, "cv01" on, "cv02" on;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Utilitários de Micro-label */
+.micro-label {
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+/* Transições controladas */
+.transition-editorial {
+  transition: all 160ms cubic-bezier(0, 0, 0.2, 1);
 }
