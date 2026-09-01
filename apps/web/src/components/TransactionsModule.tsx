@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatCentsToBRL, formatRelativeDate, parseBRLToCents, CategoryIcon } from '@equilibrium/ui';
 import { Account, Category, Profile, Transaction } from '@/hooks/useHouseholdData';
+import { ImportWizardModal } from './import/ImportWizardModal';
 import {
   Plus,
   Trash2,
@@ -13,6 +14,7 @@ import {
   ArrowRight,
   X,
   AlertCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface TransactionsModuleProps {
@@ -37,6 +39,7 @@ export function TransactionsModule({
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'expense' | 'income'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [internalModalOpen, setInternalModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [deletedTx, setDeletedTx] = useState<Transaction | null>(null);
   const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
 
@@ -86,6 +89,7 @@ export function TransactionsModule({
         amount_cents: cents,
         type,
         date: occurredAt,
+        source: 'manual',
       });
 
       if (insertError) throw insertError;
@@ -155,7 +159,7 @@ export function TransactionsModule({
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Filter Chips */}
           <div className="flex items-center bg-surface border border-hairline rounded-[6px] p-0.5 text-xs">
             <button
@@ -190,6 +194,16 @@ export function TransactionsModule({
             </button>
           </div>
 
+          {/* Import Button */}
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline text-ink rounded-[6px] font-medium text-xs transition-editorial shadow-sm cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-brand" />
+            <span>Importar Extrato</span>
+          </button>
+
+          {/* New Transaction Button */}
           <button
             onClick={() => setInternalModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial shadow-sm cursor-pointer"
@@ -224,14 +238,24 @@ export function TransactionsModule({
           </div>
           <div className="space-y-1">
             <p className="font-display text-base font-medium text-ink">Nenhuma movimentação encontrada</p>
-            <p className="text-xs text-ink-2">Ajuste os filtros ou registre uma nova transação.</p>
+            <p className="text-xs text-ink-2">Ajuste os filtros ou importe o primeiro extrato do casal.</p>
           </div>
-          <button
-            onClick={() => setInternalModalOpen(true)}
-            className="px-3.5 py-1.5 bg-surface-2 hover:bg-hairline text-ink rounded-[6px] text-xs font-medium transition-editorial cursor-pointer"
-          >
-            Adicionar Transação
-          </button>
+          <div className="flex justify-center gap-2 pt-2">
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3.5 py-1.5 bg-surface border border-hairline hover:bg-surface-2 text-ink rounded-[6px] text-xs font-medium transition-editorial cursor-pointer flex items-center gap-1.5"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-brand" />
+              <span>Importar Extrato (CSV/OFX)</span>
+            </button>
+            <button
+              onClick={() => setInternalModalOpen(true)}
+              className="px-3.5 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] text-xs font-semibold transition-editorial cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nova Transação</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="bg-surface border border-hairline rounded-[12px] overflow-hidden shadow-sm">
@@ -242,6 +266,7 @@ export function TransactionsModule({
                 <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Descrição</th>
                 <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Categoria</th>
                 <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Conta</th>
+                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Origem</th>
                 <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Valor</th>
                 <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Ação</th>
               </tr>
@@ -263,6 +288,11 @@ export function TransactionsModule({
                   </td>
                   <td className="py-2.5 px-4 text-ink-3 text-[11px]">
                     {tx.account?.name || 'Principal'}
+                  </td>
+                  <td className="py-2.5 px-4 font-mono text-ink-3 text-[11px]">
+                    <span className="px-1.5 py-0.2 bg-surface-2 border border-hairline rounded-[3px] text-[10px] uppercase">
+                      {tx.source || 'manual'}
+                    </span>
                   </td>
                   <td className="py-2.5 px-4 text-right font-mono font-medium text-xs tnum whitespace-nowrap">
                     <span className={tx.type === 'income' ? 'text-brand' : 'text-danger'}>
@@ -436,6 +466,16 @@ export function TransactionsModule({
           </div>
         </div>
       )}
+
+      {/* Modal: Importar Extrato (CSV/OFX) */}
+      <ImportWizardModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={onRefresh}
+        accounts={accounts}
+        categories={categories}
+        existingTransactions={transactions}
+      />
 
     </div>
   );

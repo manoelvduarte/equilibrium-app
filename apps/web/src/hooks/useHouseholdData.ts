@@ -39,6 +39,7 @@ export interface Transaction {
   category_id: string | null;
   created_by_id: string | null;
   deleted_at: string | null;
+  source?: 'manual' | 'csv' | 'ofx' | 'qif' | 'pluggy' | 'ai' | 'ocr';
   account?: { name: string };
   category?: { name: string; icon: string; color: string };
   creator?: { full_name: string };
@@ -205,6 +206,7 @@ export function useHouseholdData(): HouseholdSummary {
           category_id,
           created_by_id,
           deleted_at,
+          source,
           accounts:account_id ( name ),
           categories:category_id ( name, icon, color ),
           profiles:created_by_id ( full_name )
@@ -224,6 +226,7 @@ export function useHouseholdData(): HouseholdSummary {
           category_id: t.category_id,
           created_by_id: t.created_by_id,
           deleted_at: t.deleted_at,
+          source: t.source || 'manual',
           account: t.accounts,
           category: t.categories,
           creator: t.profiles,
