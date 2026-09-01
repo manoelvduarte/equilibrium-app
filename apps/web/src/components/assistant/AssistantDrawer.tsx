@@ -289,7 +289,7 @@ export function AssistantDrawer({ onActionExecuted }: AssistantDrawerProps) {
                             toolCallId={ti.toolCallId}
                             toolName={ti.toolName}
                             args={ti.args}
-                            onApproved={(res) => {
+                            onResolved={(res) => {
                               addToolResult({
                                 toolCallId: ti.toolCallId,
                                 result: res,
