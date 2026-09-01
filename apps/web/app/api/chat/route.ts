@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return Response.json(
-      { error: 'GOOGLE_GENERATIVE_AI_API_KEY não configurada' },
+      { error: 'GOOGLE_GENERATIVE_AI_API_KEY não configurada em apps/web/.env.local' },
       { status: 500 }
     );
   }
@@ -101,30 +101,65 @@ ${formattedRecent.map((r) => `  • ${r.date}: ${r.description} - ${r.amount} ($
   // 5. Tools com Fechamento sob o Client do Usuário
   const tools = createAssistantTools(supabase, profile.household_id, profile.id);
 
-  // 6. Chamada de Stream com Gemini
-  const modelName = process.env.AI_MODEL || 'gemini-2.5-flash';
+  // 6. Chamada com Gemini e Fallback Resiliente
+  let modelName = process.env.AI_MODEL || 'gemini-2.5-flash';
+  console.log(`[Chat Route] AI ready: model=${modelName} key=presente`);
 
-  const result = streamText({
-    model: google(modelName),
-    system: systemPrompt,
-    messages,
-    tools,
-    temperature: 0.2,
-    maxSteps: 5,
-    onFinish: async ({ text, toolCalls }) => {
+  try {
+    const result = streamText({
+      model: google(modelName),
+      system: systemPrompt,
+      messages,
+      tools,
+      temperature: 0.2,
+      maxSteps: 5,
+      onFinish: async ({ text, toolCalls }) => {
+        try {
+          await supabase.from('ai_messages').insert({
+            household_id: profile.household_id,
+            user_id: profile.id,
+            role: 'assistant',
+            content: text || '',
+            tool_calls: toolCalls && toolCalls.length > 0 ? toolCalls : null,
+          });
+        } catch (err) {
+          console.error('Erro ao salvar mensagem em ai_messages:', err);
+        }
+      },
+    });
+
+    return result.toDataStreamResponse();
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    console.error(`[Chat Route] Erro no stream com ${modelName}:`, errMsg);
+
+    // Fallback de modelo se for erro de modelo
+    if (
+      modelName !== 'gemini-2.0-flash' &&
+      (errMsg.includes('404') || errMsg.toLowerCase().includes('not found'))
+    ) {
+      console.log('[Chat Route] Tentando fallback para gemini-2.0-flash...');
       try {
-        await supabase.from('ai_messages').insert({
-          household_id: profile.household_id,
-          user_id: profile.id,
-          role: 'assistant',
-          content: text || '',
-          tool_calls: toolCalls && toolCalls.length > 0 ? toolCalls : null,
+        const fallbackResult = streamText({
+          model: google('gemini-2.0-flash'),
+          system: systemPrompt,
+          messages,
+          tools,
+          temperature: 0.2,
+          maxSteps: 5,
         });
-      } catch (err) {
-        console.error('Erro ao salvar mensagem em ai_messages:', err);
+        return fallbackResult.toDataStreamResponse();
+      } catch (fbErr: any) {
+        return Response.json(
+          { error: `Falha no modelo Gemini: ${fbErr?.message || errMsg}` },
+          { status: 502 }
+        );
       }
-    },
-  });
+    }
 
-  return result.toDataStreamResponse();
+    return Response.json(
+      { error: `Falha no provedor de IA: ${errMsg}` },
+      { status: 500 }
+    );
+  }
 }
