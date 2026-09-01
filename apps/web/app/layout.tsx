@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Equilibrium — Sistema Financeiro para Casais',
@@ -11,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className="bg-slate-950 text-slate-50 antialiased font-sans">
+    <html lang="pt-BR" className="dark">
+      <body className="bg-slate-950 text-slate-50 antialiased font-sans min-h-screen">
         {children}
       </body>
     </html>

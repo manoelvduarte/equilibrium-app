@@ -86,6 +86,9 @@ export function Header({ onOpenQuickAdd, onOpenNewTransaction, netWorthCents }: 
             <img
               src={activeProfile.avatarUrl}
               alt={activeProfile.fullName}
+              width={32}
+              height={32}
+              style={{ width: '32px', height: '32px', borderRadius: '9999px', objectFit: 'cover' }}
               className="w-8 h-8 rounded-full border border-emerald-500/50 object-cover"
             />
           </div>

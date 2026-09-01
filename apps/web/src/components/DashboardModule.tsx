@@ -141,7 +141,14 @@ export function DashboardModule() {
           <div className="space-y-3">
             <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src={MOCK_PROFILES[0].avatarUrl} alt="Alex" className="w-8 h-8 rounded-full border border-emerald-500" />
+                <img
+                  src={MOCK_PROFILES[0].avatarUrl}
+                  alt="Alex"
+                  width={32}
+                  height={32}
+                  style={{ width: '32px', height: '32px', borderRadius: '9999px', objectFit: 'cover' }}
+                  className="w-8 h-8 rounded-full border border-emerald-500 object-cover"
+                />
                 <div>
                   <span className="font-semibold text-slate-200 text-xs">Alex Silva</span>
                   <p className="text-[10px] text-slate-500">Gasto Individual + 50% Compartilhado</p>
@@ -152,7 +159,14 @@ export function DashboardModule() {
 
             <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img src={MOCK_PROFILES[1].avatarUrl} alt="Sam" className="w-8 h-8 rounded-full border border-indigo-500" />
+                <img
+                  src={MOCK_PROFILES[1].avatarUrl}
+                  alt="Sam"
+                  width={32}
+                  height={32}
+                  style={{ width: '32px', height: '32px', borderRadius: '9999px', objectFit: 'cover' }}
+                  className="w-8 h-8 rounded-full border border-indigo-500 object-cover"
+                />
                 <div>
                   <span className="font-semibold text-slate-200 text-xs">Sam Costa</span>
                   <p className="text-[10px] text-slate-500">Gasto Individual + 50% Compartilhado</p>
