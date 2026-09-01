@@ -154,7 +154,18 @@ export default function MobileAssistantScreen() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Erro ao conversar com o assistente.');
+      const isNetworkError =
+        err?.message?.includes('Network request failed') ||
+        err?.message?.includes('Failed to fetch') ||
+        err?.name === 'TypeError';
+
+      if (isNetworkError) {
+        setErrorMessage(
+          `Não conectou a ${WEB_API_URL}. No Expo Go use o IP do PC na mesma Wi-Fi (ex.: http://192.168.0.42:3000), nunca localhost.`
+        );
+      } else {
+        setErrorMessage(err.message || 'Erro ao conversar com o assistente.');
+      }
     } finally {
       setLoading(false);
     }
