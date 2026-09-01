@@ -305,11 +305,11 @@ export function ImportWizardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4">
-      <div className="w-full max-w-4xl max-h-[90vh] bg-surface border border-hairline rounded-[12px] shadow-lg flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-2.5 sm:p-4">
+      <div className="w-full max-w-4xl max-h-[94vh] bg-surface border border-hairline rounded-[12px] shadow-lg flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="p-4 border-b border-hairline flex items-center justify-between bg-paper/60">
+        <div className="p-3.5 sm:p-4 border-b border-hairline flex items-center justify-between bg-paper/60">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-brand stroke-[1.5]" />
             <div>

@@ -91,65 +91,65 @@ export function DashboardModule({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       
-      {/* 1. Faixa de KPIs (Sem cards, números Fraunces separados por hairline vertical) */}
+      {/* 1. Faixa de KPIs: <sm = grid 2x2, >=md = 4 inline com hairline vertical */}
       <section className="grid grid-cols-2 md:grid-cols-4 border-y border-hairline bg-paper divide-y md:divide-y-0 md:divide-x divide-hairline">
         
         {/* KPI 1: Patrimônio Líquido */}
-        <div className="py-4 px-4 sm:px-6">
-          <span className="micro-label">Patrimônio Líquido</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-1 tnum">
+        <div className="py-3 sm:py-4 px-3 sm:px-6">
+          <span className="micro-label text-[9px] sm:text-[10px]">Patrimônio Líquido</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
             {formatCentsToBRL(netWorthCents)}
           </p>
-          <span className="text-[11px] text-ink-3 mt-0.5 block">Total de ativos consolidados</span>
+          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Total consolidado</span>
         </div>
 
         {/* KPI 2: Receita do Mês */}
-        <div className="py-4 px-4 sm:px-6">
-          <span className="micro-label">Receita do Mês</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-1 tnum">
+        <div className="py-3 sm:py-4 px-3 sm:px-6">
+          <span className="micro-label text-[9px] sm:text-[10px]">Receita do Mês</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
             {formatCentsToBRL(monthIncomeCents)}
           </p>
-          <span className="text-[11px] text-ink-3 mt-0.5 block">Entradas confirmadas</span>
+          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Entradas confirmadas</span>
         </div>
 
         {/* KPI 3: Despesas do Mês */}
-        <div className="py-4 px-4 sm:px-6">
-          <span className="micro-label">Despesas do Mês</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-1 tnum">
+        <div className="py-3 sm:py-4 px-3 sm:px-6">
+          <span className="micro-label text-[9px] sm:text-[10px]">Despesas do Mês</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
             {formatCentsToBRL(monthExpenseCents)}
           </p>
-          <span className="text-[11px] text-ink-3 mt-0.5 block">Saídas computadas</span>
+          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Saídas computadas</span>
         </div>
 
         {/* KPI 4: Taxa de Poupança */}
-        <div className="py-4 px-4 sm:px-6">
-          <span className="micro-label">Taxa de Poupança</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-brand mt-1 tnum">
+        <div className="py-3 sm:py-4 px-3 sm:px-6">
+          <span className="micro-label text-[9px] sm:text-[10px]">Taxa de Poupança</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-brand mt-0.5 sm:mt-1 tnum truncate">
             {savingsRate}%
           </p>
-          <span className="text-[11px] text-ink-3 mt-0.5 block">Taxa de aporte conjunto</span>
+          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Taxa de aporte conjunto</span>
         </div>
 
       </section>
 
-      {/* 2. Grid Assimétrico de 12 Colunas */}
+      {/* 2. Grid de 12 Colunas (<lg: coluna única, gráfico primeiro, insights depois) */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Gráfico Principal de Evolução Patrimonial (Cols 1–8) */}
-        <div className="lg:col-span-8 bg-surface border border-hairline rounded-[12px] p-6 shadow-sm space-y-4">
+        <div className="lg:col-span-8 bg-surface border border-hairline rounded-[12px] p-4 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-hairline pb-3">
             <div>
-              <span className="micro-label">Evolução Patrimonial</span>
-              <h2 className="font-display text-lg font-medium text-ink">Histórico Consolidado</h2>
+              <span className="micro-label text-[9px] sm:text-[10px]">Evolução Patrimonial</span>
+              <h2 className="font-display text-base sm:text-lg font-medium text-ink">Histórico Consolidado</h2>
             </div>
             <span className="text-xs font-mono font-medium text-brand tnum bg-surface-2 px-2.5 py-1 rounded-[4px]">
               {formatCentsToBRL(netWorthCents)}
             </span>
           </div>
 
-          <div className="h-64 w-full pt-2">
+          <div className="h-56 sm:h-64 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -196,107 +196,134 @@ export function DashboardModule({
           </div>
         </div>
 
-        {/* Análise Narrativa & Visão de Casal (Cols 9–12) */}
-        <div className="lg:col-span-4 bg-surface border border-hairline rounded-[12px] p-6 shadow-sm space-y-4">
-          <div className="border-b border-hairline pb-3">
-            <span className="micro-label">Análise Editorial</span>
-            <h2 className="font-display text-lg font-medium text-ink">Diagnóstico Financeiro</h2>
+        {/* Breakdown de Despesas por Categoria (Cols 9–12) */}
+        <div className="lg:col-span-4 bg-surface border border-hairline rounded-[12px] p-4 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
+          <div>
+            <div className="border-b border-hairline pb-3">
+              <span className="micro-label text-[9px] sm:text-[10px]">Distribuição</span>
+              <h3 className="font-display text-base sm:text-lg font-medium text-ink">Gastos do Mês</h3>
+            </div>
+
+            <div className="divide-y divide-hairline mt-2 max-h-56 overflow-y-auto">
+              {expensesByCategory.length === 0 ? (
+                <div className="py-6 text-center text-xs text-ink-3 space-y-1">
+                  <Inbox className="w-5 h-5 mx-auto text-ink-3" />
+                  <p>Sem despesas categorizadas este mês.</p>
+                </div>
+              ) : (
+                expensesByCategory.map((cat) => (
+                  <div key={cat.id} className="py-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 rounded-[4px] bg-surface-2 border border-hairline">
+                        <CategoryIcon name={cat.icon} size={13} className="text-ink" />
+                      </div>
+                      <span className="font-medium text-ink">{cat.name}</span>
+                    </div>
+                    <span className="font-mono font-medium text-ink tnum">
+                      {formatCentsToBRL(cat.totalCents)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="space-y-3 text-xs text-ink-2 leading-relaxed">
-            <p>
-              O patrimônio do casal está alocado em <strong className="text-ink font-medium">{accounts.length} contas</strong> monitoradas.
-            </p>
-            <p>
-              No mês corrente, as despesas totalizam <strong className="text-danger font-medium font-mono tnum">−{formatCentsToBRL(monthExpenseCents)}</strong> frente a <strong className="text-brand font-medium font-mono tnum">+{formatCentsToBRL(monthIncomeCents)}</strong> em receitas.
-            </p>
-            <div className="p-3 bg-surface-2 border border-hairline rounded-[6px] space-y-1">
-              <span className="micro-label">Parceiros Conectados</span>
-              <div className="flex items-center gap-2 pt-1">
-                {partners.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-1.5 px-2 py-1 bg-surface border border-hairline rounded-[4px] text-xs font-medium text-ink"
-                  >
-                    <div className="w-4 h-4 rounded-full bg-surface-2 flex items-center justify-center text-[9px] font-bold text-ink">
-                      {getInitials(p.full_name)}
-                    </div>
-                    <span>{p.full_name.split(' ')[0]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="pt-3 border-t border-hairline flex items-center justify-between text-xs text-ink-3">
+            <span>Total despesas:</span>
+            <span className="font-mono font-semibold text-ink tnum">
+              {formatCentsToBRL(monthExpenseCents)}
+            </span>
           </div>
         </div>
 
       </section>
 
-      {/* 3. Tabela de Transações Recentes Full-Width */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="micro-label">Movimentações</span>
-            <h2 className="font-display text-lg font-medium text-ink">Últimas Transações</h2>
+      {/* 3. Seção Dupla: Contas Bancárias & Últimas Transações */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Contas do Casal (Cols 1–5) */}
+        <div className="lg:col-span-5 bg-surface border border-hairline rounded-[12px] p-4 sm:p-6 shadow-sm space-y-4">
+          <div className="border-b border-hairline pb-3 flex items-center justify-between">
+            <div>
+              <span className="micro-label text-[9px] sm:text-[10px]">Contas & Saldos</span>
+              <h3 className="font-display text-base sm:text-lg font-medium text-ink">Contas Integradas</h3>
+            </div>
+            <span className="text-xs text-ink-3 font-mono">{accounts.length} contas</span>
+          </div>
+
+          <div className="divide-y divide-hairline">
+            {accounts.length === 0 ? (
+              <div className="py-6 text-center text-xs text-ink-3">
+                <p>Nenhuma conta cadastrada.</p>
+              </div>
+            ) : (
+              accounts.map((acc) => (
+                <div key={acc.id} className="py-3 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold text-ink">{acc.name}</p>
+                      <span className="text-[10px] px-1.5 py-0.2 bg-surface-2 border border-hairline rounded-[4px] text-ink-3 capitalize">
+                        {acc.type}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-ink-3">
+                      Visibilidade: <span className="text-ink-2 font-medium">{acc.visibility === 'shared' ? 'Conjunta' : 'Individual'}</span>
+                    </p>
+                  </div>
+                  <span className="font-mono font-semibold text-xs text-ink tnum">
+                    {formatCentsToBRL(acc.balance_cents)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {transactions.length === 0 ? (
-          <div className="p-12 bg-surface border border-hairline rounded-[12px] text-center space-y-3">
-            <div className="w-10 h-10 rounded-full bg-surface-2 border border-hairline flex items-center justify-center mx-auto text-ink-3">
-              <Inbox className="w-5 h-5" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-display text-base font-medium text-ink">Nenhuma transação registrada</p>
-              <p className="text-xs text-ink-2">Cadastre a primeira receita ou despesa do household.</p>
+        {/* Últimas Transações (Cols 6–12) */}
+        <div className="lg:col-span-7 bg-surface border border-hairline rounded-[12px] p-4 sm:p-6 shadow-sm space-y-4">
+          <div className="border-b border-hairline pb-3 flex items-center justify-between">
+            <div>
+              <span className="micro-label text-[9px] sm:text-[10px]">Movimentações</span>
+              <h3 className="font-display text-base sm:text-lg font-medium text-ink">Últimas Transações</h3>
             </div>
             <button
               onClick={onOpenNewTransaction}
-              className="px-3.5 py-1.5 bg-surface-2 hover:bg-hairline text-ink rounded-[6px] text-xs font-medium transition-editorial cursor-pointer"
+              className="text-xs text-brand hover:underline font-medium flex items-center gap-1 cursor-pointer"
             >
-              Criar primeira transação
+              <Plus className="w-3 h-3" />
+              <span>Nova</span>
             </button>
           </div>
-        ) : (
-          <div className="bg-surface border border-hairline rounded-[12px] overflow-hidden shadow-sm">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-hairline bg-surface-2/60 text-ink-3">
-                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Data</th>
-                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Descrição</th>
-                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Categoria</th>
-                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Conta</th>
-                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Valor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {transactions.slice(0, 8).map((tx) => (
-                  <tr key={tx.id} className="h-12 hover:bg-surface-2 transition-editorial">
-                    <td className="py-2.5 px-4 font-mono text-ink-3 text-[11px] whitespace-nowrap">
-                      {formatRelativeDate(tx.occurred_at)}
-                    </td>
-                    <td className="py-2.5 px-4 font-medium text-ink">
-                      {tx.description}
-                    </td>
-                    <td className="py-2.5 px-4 text-ink-2">
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[11px]">
-                        <CategoryIcon name={tx.category?.icon || 'tag'} size={12} className="text-ink-2" />
-                        <span>{tx.category?.name || 'Geral'}</span>
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-ink-3 text-[11px]">
-                      {tx.account?.name || 'Principal'}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-medium text-xs tnum whitespace-nowrap">
-                      <span className={tx.type === 'income' ? 'text-brand' : 'text-danger'}>
-                        {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <div className="divide-y divide-hairline">
+            {transactions.length === 0 ? (
+              <div className="py-8 text-center text-xs text-ink-3 space-y-2">
+                <Inbox className="w-6 h-6 mx-auto text-ink-3" />
+                <p>Nenhuma movimentação registrada no casal.</p>
+              </div>
+            ) : (
+              transactions.slice(0, 5).map((tx) => (
+                <div key={tx.id} className="py-2.5 flex items-center justify-between text-xs">
+                  <div className="space-y-0.5 max-w-[65%]">
+                    <p className="font-medium text-ink truncate">{tx.description}</p>
+                    <div className="flex items-center gap-2 text-[11px] text-ink-3">
+                      <span className="font-mono">{formatRelativeDate(tx.occurred_at)}</span>
+                      <span>•</span>
+                      <span>{tx.category?.name || 'Geral'}</span>
+                    </div>
+                  </div>
+                  <span
+                    className={`font-mono font-medium text-xs tnum whitespace-nowrap ${
+                      tx.type === 'income' ? 'text-brand' : 'text-danger'
+                    }`}
+                  >
+                    {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
       </section>
 

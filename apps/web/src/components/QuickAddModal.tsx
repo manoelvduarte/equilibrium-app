@@ -90,14 +90,14 @@ export function QuickAddModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4">
-      <div className="w-full max-w-lg bg-surface border border-hairline rounded-[12px] p-6 shadow-md space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-3 sm:p-4">
+      <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto bg-surface border border-hairline rounded-[12px] p-4 sm:p-6 shadow-md space-y-4">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-hairline pb-3">
           <div className="flex items-center gap-2">
             <Command className="w-4 h-4 text-brand" />
-            <h2 className="font-display font-medium text-lg text-ink">Adicionar Rápido (⌘K)</h2>
+            <h2 className="font-display font-medium text-base sm:text-lg text-ink">Adicionar Rápido (⌘K)</h2>
           </div>
           <button
             onClick={onClose}

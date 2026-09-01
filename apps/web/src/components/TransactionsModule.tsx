@@ -90,6 +90,7 @@ export function TransactionsModule({
         type,
         date: occurredAt,
         source: 'manual',
+        version: 1,
       });
 
       if (insertError) throw insertError;
@@ -151,10 +152,10 @@ export function TransactionsModule({
     <div className="space-y-6">
       
       {/* Header & Filter Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-hairline pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
         <div>
-          <span className="micro-label">Extrato do Casal</span>
-          <h1 className="font-display text-2xl font-medium tracking-tight text-ink">
+          <span className="micro-label text-[9px] sm:text-[10px]">Extrato do Casal</span>
+          <h1 className="font-display text-xl sm:text-2xl font-medium tracking-tight text-ink">
             Transações
           </h1>
         </div>
@@ -197,10 +198,10 @@ export function TransactionsModule({
           {/* Import Button */}
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline text-ink rounded-[6px] font-medium text-xs transition-editorial shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline text-ink rounded-[6px] font-medium text-xs transition-editorial shadow-sm cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-brand" />
-            <span>Importar Extrato</span>
+            <span className="hidden sm:inline">Importar</span>
           </button>
 
           {/* New Transaction Button */}
@@ -209,30 +210,30 @@ export function TransactionsModule({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial shadow-sm cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Nova Transação</span>
+            <span>Nova</span>
           </button>
         </div>
       </div>
 
       {/* Undo Toast Notification */}
       {deletedTx && (
-        <div className="fixed bottom-6 right-6 z-50 p-3 bg-surface border border-hairline rounded-[8px] shadow-lg flex items-center justify-between gap-4 max-w-sm">
-          <div className="text-xs text-ink">
+        <div className="fixed bottom-6 right-6 z-50 p-3 bg-surface border border-hairline rounded-[8px] shadow-lg flex items-center justify-between gap-3 max-w-sm">
+          <div className="text-xs text-ink truncate">
             Transação <strong className="font-medium">"{deletedTx.description}"</strong> excluída.
           </div>
           <button
             onClick={handleUndo}
-            className="flex items-center gap-1 px-2.5 py-1 bg-surface-2 hover:bg-hairline text-brand rounded-[4px] text-xs font-semibold transition-editorial cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 bg-surface-2 hover:bg-hairline text-brand rounded-[4px] text-xs font-semibold transition-editorial cursor-pointer whitespace-nowrap"
           >
             <Undo2 className="w-3.5 h-3.5" />
-            <span>Desfazer (5s)</span>
+            <span>Desfazer</span>
           </button>
         </div>
       )}
 
       {/* Table Section */}
       {filteredTransactions.length === 0 ? (
-        <div className="p-12 bg-surface border border-hairline rounded-[12px] text-center space-y-3">
+        <div className="p-8 sm:p-12 bg-surface border border-hairline rounded-[12px] text-center space-y-3">
           <div className="w-10 h-10 rounded-full bg-surface-2 border border-hairline flex items-center justify-center mx-auto text-ink-3">
             <Inbox className="w-5 h-5" />
           </div>
@@ -240,13 +241,13 @@ export function TransactionsModule({
             <p className="font-display text-base font-medium text-ink">Nenhuma movimentação encontrada</p>
             <p className="text-xs text-ink-2">Ajuste os filtros ou importe o primeiro extrato do casal.</p>
           </div>
-          <div className="flex justify-center gap-2 pt-2">
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
             <button
               onClick={() => setIsImportModalOpen(true)}
               className="px-3.5 py-1.5 bg-surface border border-hairline hover:bg-surface-2 text-ink rounded-[6px] text-xs font-medium transition-editorial cursor-pointer flex items-center gap-1.5"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-brand" />
-              <span>Importar Extrato (CSV/OFX)</span>
+              <span>Importar Extrato</span>
             </button>
             <button
               onClick={() => setInternalModalOpen(true)}
@@ -259,72 +260,74 @@ export function TransactionsModule({
         </div>
       ) : (
         <div className="bg-surface border border-hairline rounded-[12px] overflow-hidden shadow-sm">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-hairline bg-surface-2/60 text-ink-3">
-                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Data</th>
-                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Descrição</th>
-                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Categoria</th>
-                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Conta</th>
-                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Origem</th>
-                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Valor</th>
-                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Ação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {filteredTransactions.map((tx) => (
-                <tr key={tx.id} className="h-12 hover:bg-surface-2 transition-editorial group">
-                  <td className="py-2.5 px-4 font-mono text-ink-3 text-[11px] whitespace-nowrap">
-                    {formatRelativeDate(tx.occurred_at)}
-                  </td>
-                  <td className="py-2.5 px-4 font-medium text-ink">
-                    {tx.description}
-                  </td>
-                  <td className="py-2.5 px-4 text-ink-2">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[11px]">
-                      <CategoryIcon name={tx.category?.icon || 'tag'} size={12} className="text-ink-2" />
-                      <span>{tx.category?.name || 'Geral'}</span>
-                    </div>
-                  </td>
-                  <td className="py-2.5 px-4 text-ink-3 text-[11px]">
-                    {tx.account?.name || 'Principal'}
-                  </td>
-                  <td className="py-2.5 px-4 font-mono text-ink-3 text-[11px]">
-                    <span className="px-1.5 py-0.2 bg-surface-2 border border-hairline rounded-[3px] text-[10px] uppercase">
-                      {tx.source || 'manual'}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-right font-mono font-medium text-xs tnum whitespace-nowrap">
-                    <span className={tx.type === 'income' ? 'text-brand' : 'text-danger'}>
-                      {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-4 text-right">
-                    <button
-                      onClick={() => handleDelete(tx)}
-                      className="p-1 text-ink-3 hover:text-danger opacity-0 group-hover:opacity-100 transition-editorial cursor-pointer rounded-[4px]"
-                      title="Excluir transação"
-                      aria-label="Excluir"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </td>
+          <div className="overflow-x-auto -mx-1 sm:mx-0">
+            <table className="w-full text-left text-xs min-w-[580px]">
+              <thead>
+                <tr className="border-b border-hairline bg-surface-2/60 text-ink-3">
+                  <th className="py-2.5 px-3 sm:px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Data</th>
+                  <th className="py-2.5 px-3 sm:px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Descrição</th>
+                  <th className="py-2.5 px-3 sm:px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Categoria</th>
+                  <th className="py-2.5 px-3 sm:px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Conta</th>
+                  <th className="py-2.5 px-3 sm:px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Origem</th>
+                  <th className="py-2.5 px-3 sm:px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Valor</th>
+                  <th className="py-2.5 px-3 sm:px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Ação</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {filteredTransactions.map((tx) => (
+                  <tr key={tx.id} className="h-11 sm:h-12 hover:bg-surface-2 transition-editorial group">
+                    <td className="py-2 px-3 sm:px-4 font-mono text-ink-3 text-[11px] whitespace-nowrap">
+                      {formatRelativeDate(tx.occurred_at)}
+                    </td>
+                    <td className="py-2 px-3 sm:px-4 font-medium text-ink max-w-[200px] truncate">
+                      {tx.description}
+                    </td>
+                    <td className="py-2 px-3 sm:px-4 text-ink-2">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[11px]">
+                        <CategoryIcon name={tx.category?.icon || 'tag'} size={12} className="text-ink-2" />
+                        <span className="truncate">{tx.category?.name || 'Geral'}</span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-3 sm:px-4 text-ink-3 text-[11px] whitespace-nowrap">
+                      {tx.account?.name || 'Principal'}
+                    </td>
+                    <td className="py-2 px-3 sm:px-4 font-mono text-ink-3 text-[11px]">
+                      <span className="px-1.5 py-0.2 bg-surface-2 border border-hairline rounded-[3px] text-[10px] uppercase">
+                        {tx.source || 'manual'}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 sm:px-4 text-right font-mono font-medium text-xs tnum whitespace-nowrap">
+                      <span className={tx.type === 'income' ? 'text-brand' : 'text-danger'}>
+                        {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 sm:px-4 text-right">
+                      <button
+                        onClick={() => handleDelete(tx)}
+                        className="p-1 text-ink-3 hover:text-danger opacity-60 group-hover:opacity-100 transition-editorial cursor-pointer rounded-[4px]"
+                        title="Excluir transação"
+                        aria-label="Excluir"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {/* Modal: Nova Transação */}
+      {/* Modal: Nova Transação (Responsivo em <sm) */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4">
-          <div className="w-full max-w-lg bg-surface border border-hairline rounded-[12px] p-6 shadow-md space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-3 sm:p-4">
+          <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto bg-surface border border-hairline rounded-[12px] p-5 sm:p-6 shadow-md space-y-4">
             
             <div className="flex items-center justify-between border-b border-hairline pb-3">
               <div className="flex items-center gap-2">
                 <Plus className="w-4 h-4 text-brand stroke-[2.5]" />
-                <h2 className="font-display font-medium text-lg text-ink">Nova Transação</h2>
+                <h2 className="font-display font-medium text-base sm:text-lg text-ink">Nova Transação</h2>
               </div>
               <button
                 onClick={handleCloseModal}
@@ -384,7 +387,7 @@ export function TransactionsModule({
               </div>
 
               {/* Amount & Date */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block micro-label">Valor (R$)</label>
                   <input
@@ -410,7 +413,7 @@ export function TransactionsModule({
               </div>
 
               {/* Account & Category */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block micro-label">Conta</label>
                   <select

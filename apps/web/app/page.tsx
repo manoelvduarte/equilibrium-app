@@ -62,10 +62,10 @@ export default function HomePage() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-6">
         
         {/* Navigation Tabs (Sem códigos M2/M3) */}
-        <nav className="flex items-center gap-1 border-b border-hairline pb-2 overflow-x-auto text-xs">
+        <nav className="flex items-center gap-1 border-b border-hairline pb-2 overflow-x-auto text-xs no-scrollbar">
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
