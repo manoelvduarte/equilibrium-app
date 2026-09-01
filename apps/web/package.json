@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm --filter @equilibrium/validations build && pnpm --filter @equilibrium/ui build && pnpm --filter @equilibrium/db build && pnpm --filter @equilibrium/ai build && next build",
     "start": "next start",
     "lint": "next lint"
   },
