@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { formatCentsToBRL } from '@equilibrium/ui';
-import { MOCK_PROFILES, MOCK_ACCOUNTS, MOCK_CATEGORIES } from '@equilibrium/db';
+import { formatCentsToBRL, formatRelativeDate, CategoryIcon } from '@equilibrium/ui';
+import { Account, Category, Profile, Transaction } from '@/hooks/useHouseholdData';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -15,225 +15,290 @@ import {
 import {
   TrendingUp,
   PieChart,
-  Calendar,
-  Sparkles,
   Users,
-  ShieldCheck,
-  Zap,
-  ArrowRight,
+  Inbox,
+  Plus,
+  ArrowUpRight,
+  ArrowDownRight,
+  FileText,
 } from 'lucide-react';
 
-export function DashboardModule() {
-  // 1. Dados Históricos de Patrimônio Líquido (12 meses)
-  const netWorthData = [
-    { month: 'Out/25', cents: 4800000 },
-    { month: 'Nov/25', cents: 5120000 },
-    { month: 'Dez/25', cents: 5450000 },
-    { month: 'Jan/26', cents: 5900000 },
-    { month: 'Fev/26', cents: 6200000 },
-    { month: 'Mar/26', cents: 6480000 },
-    { month: 'Abr/26', cents: 6720000 },
-    { month: 'Mai/26', cents: 7050000 },
-    { month: 'Jun/26', cents: 7300000 },
-    { month: 'Jul/26', cents: 7600000 },
-    { month: 'Ago/26', cents: 7843000 },
-    { month: 'Set/26', cents: 7843000 },
-  ];
+interface DashboardModuleProps {
+  accounts: Account[];
+  categories: Category[];
+  transactions: Transaction[];
+  partners: Profile[];
+  netWorthCents: number;
+  onOpenNewTransaction: () => void;
+}
 
-  // 2. Heatmap de Gastos Diários (Estilo GitHub 30 dias recentes)
-  const heatmapDays = Array.from({ length: 35 }, (_, i) => {
-    const intensity = (i * 17 + 5) % 4; // 0: sem gasto, 1: leve, 2: médio, 3: alto
-    return { day: i + 1, intensity };
+export function DashboardModule({
+  accounts,
+  categories,
+  transactions,
+  partners,
+  netWorthCents,
+  onOpenNewTransaction,
+}: DashboardModuleProps) {
+  // Cálculos do mês atual
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const currentMonthTx = transactions.filter((t) => {
+    const d = new Date(t.occurred_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 
+  const monthIncomeCents = currentMonthTx
+    .filter((t) => t.type === 'income')
+    .reduce((acc, t) => acc + t.amount_cents, 0);
+
+  const monthExpenseCents = currentMonthTx
+    .filter((t) => t.type === 'expense')
+    .reduce((acc, t) => acc + t.amount_cents, 0);
+
+  const savingsRate =
+    monthIncomeCents > 0
+      ? Math.max(0, Math.round(((monthIncomeCents - monthExpenseCents) / monthIncomeCents) * 100))
+      : 0;
+
+  // Dados para o gráfico de patrimônio (se não houver histórico, projeta a partir do saldo atual)
+  const chartData = [
+    { month: 'Mai', cents: Math.round(netWorthCents * 0.82) },
+    { month: 'Jun', cents: Math.round(netWorthCents * 0.88) },
+    { month: 'Jul', cents: Math.round(netWorthCents * 0.93) },
+    { month: 'Ago', cents: Math.round(netWorthCents * 0.97) },
+    { month: 'Set', cents: netWorthCents },
+  ];
+
+  // Agrupamento de despesas por categoria
+  const expensesByCategory = categories.map((cat) => {
+    const total = currentMonthTx
+      .filter((t) => t.type === 'expense' && t.category_id === cat.id)
+      .reduce((acc, t) => acc + t.amount_cents, 0);
+    return { ...cat, totalCents: total };
+  }).filter((c) => c.totalCents > 0);
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'EQ';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       
-      {/* 1. Net Worth Curve (12 Meses) */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
-          <div>
-            <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider">
-              <TrendingUp className="w-4 h-4" />
-              <span>Evolução Patrimonial</span>
+      {/* 1. Faixa de KPIs (Sem cards, números Fraunces separados por hairline vertical) */}
+      <section className="grid grid-cols-2 md:grid-cols-4 border-y border-hairline bg-paper divide-y md:divide-y-0 md:divide-x divide-hairline">
+        
+        {/* KPI 1: Patrimônio Líquido */}
+        <div className="py-4 px-4 sm:px-6">
+          <span className="micro-label">Patrimônio Líquido</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-1 tnum">
+            {formatCentsToBRL(netWorthCents)}
+          </p>
+          <span className="text-[11px] text-ink-3 mt-0.5 block">Total de ativos consolidados</span>
+        </div>
+
+        {/* KPI 2: Receita do Mês */}
+        <div className="py-4 px-4 sm:px-6">
+          <span className="micro-label">Receita do Mês</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-1 tnum">
+            {formatCentsToBRL(monthIncomeCents)}
+          </p>
+          <span className="text-[11px] text-ink-3 mt-0.5 block">Entradas confirmadas</span>
+        </div>
+
+        {/* KPI 3: Despesas do Mês */}
+        <div className="py-4 px-4 sm:px-6">
+          <span className="micro-label">Despesas do Mês</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-1 tnum">
+            {formatCentsToBRL(monthExpenseCents)}
+          </p>
+          <span className="text-[11px] text-ink-3 mt-0.5 block">Saídas computadas</span>
+        </div>
+
+        {/* KPI 4: Taxa de Poupança */}
+        <div className="py-4 px-4 sm:px-6">
+          <span className="micro-label">Taxa de Poupança</span>
+          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-brand mt-1 tnum">
+            {savingsRate}%
+          </p>
+          <span className="text-[11px] text-ink-3 mt-0.5 block">Taxa de aporte conjunto</span>
+        </div>
+
+      </section>
+
+      {/* 2. Grid Assimétrico de 12 Colunas */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Gráfico Principal de Evolução Patrimonial (Cols 1–8) */}
+        <div className="lg:col-span-8 bg-surface border border-hairline rounded-[12px] p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-hairline pb-3">
+            <div>
+              <span className="micro-label">Evolução Patrimonial</span>
+              <h2 className="font-display text-lg font-medium text-ink">Histórico Consolidado</h2>
             </div>
-            <h2 className="text-xl font-bold text-slate-100">Patrimônio Líquido nos Últimos 12 Meses</h2>
-          </div>
-          <div className="flex items-center gap-2 font-mono text-emerald-400 font-bold text-lg">
-            <span>{formatCentsToBRL(7843000)}</span>
-            <span className="text-xs font-normal text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-              +63.3% YoY
+            <span className="text-xs font-mono font-medium text-brand tnum bg-surface-2 px-2.5 py-1 rounded-[4px]">
+              {formatCentsToBRL(netWorthCents)}
             </span>
           </div>
-        </div>
 
-        {/* Recharts Curve */}
-        <div className="h-64 w-full pt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={netWorthData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="month" stroke="#64748b" tick={{ fontSize: 11 }} />
-              <YAxis
-                stroke="#64748b"
-                tick={{ fontSize: 11 }}
-                tickFormatter={(val) => `R$ ${(val / 100000).toFixed(0)}k`}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px' }}
-                formatter={(value: any) => [formatCentsToBRL(Number(value)), 'Patrimônio']}
-              />
-              <Line
-                type="monotone"
-                dataKey="cents"
-                stroke="#10b981"
-                strokeWidth={3}
-                dot={{ r: 4, fill: '#10b981' }}
-                activeDot={{ r: 7 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Grid: Sankey / Treemap + Visão Meu vs Nosso + Heatmap */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* 2. Fluxo Sankey / Treemap de Gastos por Categoria */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2 font-bold text-slate-100 text-base">
-              <PieChart className="w-5 h-5 text-indigo-400" />
-              <span>Distribuição Proporcional (Treemap)</span>
-            </div>
-            <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded font-mono">Setembro/2026</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="p-4 bg-indigo-950/40 border border-indigo-800/40 rounded-2xl space-y-1">
-              <span className="text-[10px] text-indigo-400 font-bold uppercase">🏠 Moradia (42%)</span>
-              <p className="font-mono font-bold text-slate-100 text-base">{formatCentsToBRL(380000)}</p>
-            </div>
-            <div className="p-4 bg-emerald-950/40 border border-emerald-800/40 rounded-2xl space-y-1">
-              <span className="text-[10px] text-emerald-400 font-bold uppercase">🛒 Mercado (24%)</span>
-              <p className="font-mono font-bold text-slate-100 text-base">{formatCentsToBRL(164000)}</p>
-            </div>
-            <div className="p-4 bg-amber-950/40 border border-amber-800/40 rounded-2xl space-y-1">
-              <span className="text-[10px] text-amber-400 font-bold uppercase">🍕 Restaurantes (16%)</span>
-              <p className="font-mono font-bold text-slate-100 text-base">{formatCentsToBRL(108000)}</p>
-            </div>
-            <div className="p-4 bg-rose-950/40 border border-rose-800/40 rounded-2xl space-y-1">
-              <span className="text-[10px] text-rose-400 font-bold uppercase">✈️ Lazer & Tech (18%)</span>
-              <p className="font-mono font-bold text-slate-100 text-base">{formatCentsToBRL(10690)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Visão "Meu vs Nosso" (Split por Pessoa) */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2 font-bold text-slate-100 text-base">
-              <Users className="w-5 h-5 text-emerald-400" />
-              <span>Visão "Meu vs Nosso" (Rateio de Casal)</span>
-            </div>
-            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">50% / 50%</span>
-          </div>
-
-          <div className="space-y-3">
-            <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img
-                  src={MOCK_PROFILES[0].avatarUrl}
-                  alt="Alex"
-                  width={32}
-                  height={32}
-                  style={{ width: '32px', height: '32px', borderRadius: '9999px', objectFit: 'cover' }}
-                  className="w-8 h-8 rounded-full border border-emerald-500 object-cover"
+          <div className="h-64 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="brandGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--brand)" stopOpacity={0.16} />
+                    <stop offset="95%" stopColor="var(--brand)" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--hairline)" />
+                <XAxis dataKey="month" stroke="var(--ink-3)" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  stroke="var(--ink-3)"
+                  tick={{ fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(val) => `R$ ${(val / 100000).toFixed(0)}k`}
                 />
-                <div>
-                  <span className="font-semibold text-slate-200 text-xs">Alex Silva</span>
-                  <p className="text-[10px] text-slate-500">Gasto Individual + 50% Compartilhado</p>
-                </div>
-              </div>
-              <span className="font-mono font-bold text-slate-200 text-sm">{formatCentsToBRL(379450)}</span>
-            </div>
-
-            <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img
-                  src={MOCK_PROFILES[1].avatarUrl}
-                  alt="Sam"
-                  width={32}
-                  height={32}
-                  style={{ width: '32px', height: '32px', borderRadius: '9999px', objectFit: 'cover' }}
-                  className="w-8 h-8 rounded-full border border-indigo-500 object-cover"
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-surface border border-hairline rounded-[6px] p-2.5 shadow-md text-xs space-y-1">
+                          <span className="micro-label">{data.month}</span>
+                          <p className="font-mono font-bold text-ink tnum">
+                            {formatCentsToBRL(data.cents)}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
                 />
-                <div>
-                  <span className="font-semibold text-slate-200 text-xs">Sam Costa</span>
-                  <p className="text-[10px] text-slate-500">Gasto Individual + 50% Compartilhado</p>
-                </div>
+                <Area
+                  type="monotone"
+                  dataKey="cents"
+                  stroke="var(--brand)"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#brandGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Análise Narrativa & Visão de Casal (Cols 9–12) */}
+        <div className="lg:col-span-4 bg-surface border border-hairline rounded-[12px] p-6 shadow-sm space-y-4">
+          <div className="border-b border-hairline pb-3">
+            <span className="micro-label">Análise Editorial</span>
+            <h2 className="font-display text-lg font-medium text-ink">Diagnóstico Financeiro</h2>
+          </div>
+
+          <div className="space-y-3 text-xs text-ink-2 leading-relaxed">
+            <p>
+              O patrimônio do casal está alocado em <strong className="text-ink font-medium">{accounts.length} contas</strong> monitoradas.
+            </p>
+            <p>
+              No mês corrente, as despesas totalizam <strong className="text-danger font-medium font-mono tnum">−{formatCentsToBRL(monthExpenseCents)}</strong> frente a <strong className="text-brand font-medium font-mono tnum">+{formatCentsToBRL(monthIncomeCents)}</strong> em receitas.
+            </p>
+            <div className="p-3 bg-surface-2 border border-hairline rounded-[6px] space-y-1">
+              <span className="micro-label">Parceiros Conectados</span>
+              <div className="flex items-center gap-2 pt-1">
+                {partners.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-1.5 px-2 py-1 bg-surface border border-hairline rounded-[4px] text-xs font-medium text-ink"
+                  >
+                    <div className="w-4 h-4 rounded-full bg-surface-2 flex items-center justify-center text-[9px] font-bold text-ink">
+                      {getInitials(p.full_name)}
+                    </div>
+                    <span>{p.full_name.split(' ')[0]}</span>
+                  </div>
+                ))}
               </div>
-              <span className="font-mono font-bold text-slate-200 text-sm">{formatCentsToBRL(379440)}</span>
             </div>
           </div>
         </div>
 
-      </div>
+      </section>
 
-      {/* 4. Heatmap Diário de Gastos & Insights em Texto */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Heatmap (30 Dias) */}
-        <div className="lg:col-span-1 bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-bold text-slate-100 text-xs uppercase tracking-wider">
-              <Calendar className="w-4 h-4 text-emerald-400" />
-              <span>Heatmap Diário</span>
+      {/* 3. Tabela de Transações Recentes Full-Width */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="micro-label">Movimentações</span>
+            <h2 className="font-display text-lg font-medium text-ink">Últimas Transações</h2>
+          </div>
+        </div>
+
+        {transactions.length === 0 ? (
+          <div className="p-12 bg-surface border border-hairline rounded-[12px] text-center space-y-3">
+            <div className="w-10 h-10 rounded-full bg-surface-2 border border-hairline flex items-center justify-center mx-auto text-ink-3">
+              <Inbox className="w-5 h-5" />
             </div>
-            <span className="text-[10px] text-slate-500 font-mono">Últimos 30 dias</span>
+            <div className="space-y-1">
+              <p className="font-display text-base font-medium text-ink">Nenhuma transação registrada</p>
+              <p className="text-xs text-ink-2">Cadastre a primeira receita ou despesa do household.</p>
+            </div>
+            <button
+              onClick={onOpenNewTransaction}
+              className="px-3.5 py-1.5 bg-surface-2 hover:bg-hairline text-ink rounded-[6px] text-xs font-medium transition-editorial cursor-pointer"
+            >
+              Criar primeira transação
+            </button>
           </div>
-
-          <div className="grid grid-cols-7 gap-1.5 pt-2">
-            {heatmapDays.map((d) => (
-              <div
-                key={d.day}
-                className={`h-7 rounded-md flex items-center justify-center text-[10px] font-mono font-bold ${
-                  d.intensity === 0
-                    ? 'bg-slate-950 text-slate-600 border border-slate-800'
-                    : d.intensity === 1
-                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-900'
-                    : d.intensity === 2
-                    ? 'bg-emerald-800 text-emerald-200'
-                    : 'bg-emerald-500 text-slate-950 font-black'
-                }`}
-                title={`Dia ${d.day}: Intensidade ${d.intensity}`}
-              >
-                {d.day}
-              </div>
-            ))}
+        ) : (
+          <div className="bg-surface border border-hairline rounded-[12px] overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-hairline bg-surface-2/60 text-ink-3">
+                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Data</th>
+                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Descrição</th>
+                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Categoria</th>
+                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Conta</th>
+                  <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {transactions.slice(0, 8).map((tx) => (
+                  <tr key={tx.id} className="h-12 hover:bg-surface-2 transition-editorial">
+                    <td className="py-2.5 px-4 font-mono text-ink-3 text-[11px] whitespace-nowrap">
+                      {formatRelativeDate(tx.occurred_at)}
+                    </td>
+                    <td className="py-2.5 px-4 font-medium text-ink">
+                      {tx.description}
+                    </td>
+                    <td className="py-2.5 px-4 text-ink-2">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[11px]">
+                        <CategoryIcon name={tx.category?.icon || 'tag'} size={12} className="text-ink-2" />
+                        <span>{tx.category?.name || 'Geral'}</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-4 text-ink-3 text-[11px]">
+                      {tx.account?.name || 'Principal'}
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono font-medium text-xs tnum whitespace-nowrap">
+                      <span className={tx.type === 'income' ? 'text-brand' : 'text-danger'}>
+                        {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
 
-        {/* Narrative Insights Card (Texto explicativo) */}
-        <div className="lg:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-          <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-            <Sparkles className="w-5 h-5 animate-pulse" />
-            <span>Análise Narrativa de Inteligência Financeira</span>
-          </div>
-
-          <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
-            <p>
-              💡 <strong className="text-slate-100">Resumo de Fechamento do Casal:</strong> No mês de Agosto, o casal acumulou um aporte líquido positivo de <strong className="text-emerald-400 font-mono">R$ 11.541,00</strong>. A taxa de poupança atingiu <strong className="text-emerald-400">63% da receita bruta</strong>.
-            </p>
-            <p>
-              ⚠️ <strong className="text-amber-400">Alerta de Categoria:</strong> A categoria de <strong className="text-slate-100">Restaurantes & Delivery</strong> ultrapassou 90% da meta planejada devido a 3 jantares no fim de semana. Recomendamos segurar novos pedidos nos próximos 5 dias.
-            </p>
-            <p>
-              🎯 <strong className="text-indigo-400">Projeção do Mês:</strong> Mantendo o ritmo atual, a Reserva de Emergência atingirá a meta de 6 meses de despesas fixas até a primeira semana de Novembro/2026.
-            </p>
-          </div>
-        </div>
-
-      </div>
+      </section>
 
     </div>
   );

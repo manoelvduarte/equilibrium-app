@@ -1,34 +1,31 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { formatCentsToBRL } from '@equilibrium/ui';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 
 export default function MobileHomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         
         {/* Brand */}
         <View style={styles.header}>
-          <Text style={styles.title}>Equilibrium Mobile</Text>
-          <Text style={styles.subtitle}>Gestão Financeira para Casais</Text>
+          <Text style={styles.brandTitle}>Equilibrium</Text>
+          <Text style={styles.brandSubtitle}>Sistema Financeiro para Casais</Text>
         </View>
 
-        {/* Net Worth Card */}
+        {/* Status Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>PATRIMÔNIO LÍQUIDO</Text>
-          <Text style={styles.cardAmount}>{formatCentsToBRL(7843000)}</Text>
-          <Text style={styles.cardBadge}>+63.3% YoY • Nosso Casa</Text>
+          <Text style={styles.cardLabel}>APLICATIVO MOBILE</Text>
+          <Text style={styles.cardText}>
+            A fundação web e os serviços Supabase com RLS foram ativados com sucesso. O cliente móvel nativo em Expo SDK 52 será disponibilizado na Fase 3.
+          </Text>
         </View>
 
-        {/* Quick Add Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Módulos Mobile Ativos</Text>
-          <Text style={styles.item}>• Quick-Add com Linguagem Natural</Text>
-          <Text style={styles.item}>• Leitura de Recibo por Câmera (OCR)</Text>
-          <Text style={styles.item}>• Chat de IA Agêntica sob Aprovação Prévia</Text>
-        </View>
+        {/* Disabled Action Button */}
+        <TouchableOpacity disabled style={styles.button}>
+          <Text style={styles.buttonText}>Entrar (Fase 3)</Text>
+        </TouchableOpacity>
 
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -36,63 +33,58 @@ export default function MobileHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#151310',
   },
   content: {
-    padding: 20,
-    gap: 16,
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    gap: 20,
   },
   header: {
-    marginBottom: 8,
+    gap: 4,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#10b981',
+  brandTitle: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#F2EFE9',
+    letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#94a3b8',
+  brandSubtitle: {
+    fontSize: 13,
+    color: '#8A8478',
   },
   card: {
-    backgroundColor: '#0f172a',
-    borderColor: '#1e293b',
+    backgroundColor: '#1C1915',
+    borderColor: '#2A261F',
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
-  },
-  cardTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#64748b',
-    letterSpacing: 1,
-  },
-  cardAmount: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#10b981',
-    marginVertical: 4,
-    fontFamily: 'Courier',
-  },
-  cardBadge: {
-    fontSize: 12,
-    color: '#34d399',
-  },
-  section: {
-    backgroundColor: '#0f172a',
-    borderColor: '#1e293b',
-    borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 16,
     gap: 8,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#f8fafc',
+  cardLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#8A8478',
+    letterSpacing: 0.8,
   },
-  item: {
+  cardText: {
     fontSize: 13,
-    color: '#cbd5e1',
+    color: '#C0BAB0',
+    lineHeight: 18,
+  },
+  button: {
+    backgroundColor: '#242019',
+    borderColor: '#2A261F',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingVertical: 14,
+    alignItems: 'center',
+    opacity: 0.6,
+  },
+  buttonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8A8478',
   },
 });

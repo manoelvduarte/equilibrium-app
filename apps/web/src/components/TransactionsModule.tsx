@@ -1,319 +1,438 @@
 'use client';
 
 import React, { useState } from 'react';
-import { formatCentsToBRL, parseBRLToCents } from '@equilibrium/ui';
+import { createClient } from '@/lib/supabase/client';
+import { formatCentsToBRL, formatRelativeDate, parseBRLToCents, CategoryIcon } from '@equilibrium/ui';
+import { Account, Category, Profile, Transaction } from '@/hooks/useHouseholdData';
 import {
-  TransactionMock,
-  MOCK_ACCOUNTS,
-  MOCK_CATEGORIES,
-  MOCK_PROFILES,
-  MOCK_HISTORY,
-  HistoryMock,
-} from '@equilibrium/db';
-import {
-  Search,
-  Filter,
-  Trash2,
-  History,
-  RotateCcw,
-  ArrowUpRight,
-  ArrowDownLeft,
-  ArrowRightLeft,
-  Users,
-  Tag,
-  Calendar,
-  X,
-  Check,
   Plus,
+  Trash2,
+  Undo2,
+  Inbox,
+  Filter,
+  ArrowRight,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 
 interface TransactionsModuleProps {
-  transactions: TransactionMock[];
-  onAddTransaction: (tx: Partial<TransactionMock>) => void;
-  onUpdateTransaction: (id: string, updated: Partial<TransactionMock>) => void;
-  onSoftDeleteTransaction: (id: string) => void;
-  onRestoreTransaction: (id: string) => void;
+  accounts: Account[];
+  categories: Category[];
+  transactions: Transaction[];
+  userProfile: Profile | null;
+  onRefresh: () => Promise<void>;
+  isNewModalOpen?: boolean;
+  onCloseNewModal?: () => void;
 }
 
 export function TransactionsModule({
+  accounts,
+  categories,
   transactions,
-  onAddTransaction,
-  onUpdateTransaction,
-  onSoftDeleteTransaction,
-  onRestoreTransaction,
+  userProfile,
+  onRefresh,
+  isNewModalOpen = false,
+  onCloseNewModal,
 }: TransactionsModuleProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'expense' | 'income'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedAccount, setSelectedAccount] = useState<string>('all');
-  const [selectedHistory, setSelectedHistory] = useState<HistoryMock | null>(null);
-  const [deletedToastId, setDeletedToastId] = useState<string | null>(null);
+  const [internalModalOpen, setInternalModalOpen] = useState(false);
+  const [deletedTx, setDeletedTx] = useState<Transaction | null>(null);
+  const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Filter logic
-  const activeTransactions = transactions.filter((t) => !t.deletedAt);
-  const filtered = activeTransactions.filter((tx) => {
-    const matchSearch =
-      tx.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (tx.merchant && tx.merchant.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchCat = selectedCategory === 'all' || tx.categoryId === selectedCategory;
-    const matchAcc = selectedAccount === 'all' || tx.accountId === selectedAccount;
-    return matchSearch && matchCat && matchAcc;
+  // Form State
+  const [description, setDescription] = useState('');
+  const [amountStr, setAmountStr] = useState('');
+  const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [accountId, setAccountId] = useState(accounts[0]?.id || '');
+  const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
+  const [occurredAt, setOccurredAt] = useState(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const supabase = createClient();
+  const showModal = isNewModalOpen || internalModalOpen;
+
+  const handleCloseModal = () => {
+    setInternalModalOpen(false);
+    onCloseNewModal?.();
+    setDescription('');
+    setAmountStr('');
+    setError(null);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cents = parseBRLToCents(amountStr);
+    if (cents <= 0) {
+      setError('Informe um valor válido em reais.');
+      return;
+    }
+    if (!accountId || !userProfile?.household_id) {
+      setError('Selecione uma conta válida.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: insertError } = await supabase.from('transactions').insert({
+        household_id: userProfile.household_id,
+        account_id: accountId,
+        category_id: categoryId || null,
+        created_by_profile_id: userProfile.id,
+        description,
+        amount_cents: cents,
+        type,
+        occurred_at: new Date(occurredAt).toISOString(),
+      });
+
+      if (insertError) throw insertError;
+
+      await onRefresh();
+      handleCloseModal();
+    } catch (err: any) {
+      setError(err.message || 'Falha ao criar transação.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (tx: Transaction) => {
+    try {
+      const { error: delError } = await supabase
+        .from('transactions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', tx.id);
+
+      if (delError) throw delError;
+
+      setDeletedTx(tx);
+      await onRefresh();
+
+      if (undoTimer) clearTimeout(undoTimer);
+      const timer = setTimeout(() => {
+        setDeletedTx(null);
+      }, 5000);
+      setUndoTimer(timer);
+    } catch (err: any) {
+      console.error('Erro ao excluir transação:', err);
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!deletedTx) return;
+    try {
+      await supabase
+        .from('transactions')
+        .update({ deleted_at: null })
+        .eq('id', deletedTx.id);
+
+      setDeletedTx(null);
+      if (undoTimer) clearTimeout(undoTimer);
+      await onRefresh();
+    } catch (err) {
+      console.error('Erro ao restaurar transação:', err);
+    }
+  };
+
+  const filteredTransactions = transactions.filter((t) => {
+    if (selectedFilter !== 'all' && t.type !== selectedFilter) return false;
+    if (selectedCategory !== 'all' && t.category_id !== selectedCategory) return false;
+    return true;
   });
-
-  const handleDelete = (id: string) => {
-    onSoftDeleteTransaction(id);
-    setDeletedToastId(id);
-    setTimeout(() => {
-      setDeletedToastId((current) => (current === id ? null : current));
-    }, 5000);
-  };
-
-  const handleUndo = (id: string) => {
-    onRestoreTransaction(id);
-    setDeletedToastId(null);
-  };
 
   return (
     <div className="space-y-6">
       
-      {/* Toast Undo Notification */}
-      {deletedToastId && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center justify-between gap-4 px-5 py-3.5 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-5">
-          <div className="flex items-center gap-2 text-slate-200 text-xs font-medium">
-            <Trash2 className="w-4 h-4 text-amber-400" />
-            <span>Transação removida (Soft delete aplicado).</span>
+      {/* Header & Filter Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-hairline pb-4">
+        <div>
+          <span className="micro-label">Extrato do Casal</span>
+          <h1 className="font-display text-2xl font-medium tracking-tight text-ink">
+            Transações
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Filter Chips */}
+          <div className="flex items-center bg-surface border border-hairline rounded-[6px] p-0.5 text-xs">
+            <button
+              onClick={() => setSelectedFilter('all')}
+              className={`px-2.5 py-1 rounded-[4px] font-medium transition-editorial ${
+                selectedFilter === 'all'
+                  ? 'bg-surface-2 text-ink shadow-sm'
+                  : 'text-ink-3 hover:text-ink'
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => setSelectedFilter('expense')}
+              className={`px-2.5 py-1 rounded-[4px] font-medium transition-editorial ${
+                selectedFilter === 'expense'
+                  ? 'bg-surface-2 text-ink shadow-sm'
+                  : 'text-ink-3 hover:text-ink'
+              }`}
+            >
+              Despesas
+            </button>
+            <button
+              onClick={() => setSelectedFilter('income')}
+              className={`px-2.5 py-1 rounded-[4px] font-medium transition-editorial ${
+                selectedFilter === 'income'
+                  ? 'bg-surface-2 text-ink shadow-sm'
+                  : 'text-ink-3 hover:text-ink'
+              }`}
+            >
+              Receitas
+            </button>
+          </div>
+
+          <button
+            onClick={() => setInternalModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial shadow-sm cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Nova Transação</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Undo Toast Notification */}
+      {deletedTx && (
+        <div className="fixed bottom-6 right-6 z-50 p-3 bg-surface border border-hairline rounded-[8px] shadow-lg flex items-center justify-between gap-4 max-w-sm">
+          <div className="text-xs text-ink">
+            Transação <strong className="font-medium">"{deletedTx.description}"</strong> excluída.
           </div>
           <button
-            onClick={() => handleUndo(deletedToastId)}
-            className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg text-xs font-bold transition"
+            onClick={handleUndo}
+            className="flex items-center gap-1 px-2.5 py-1 bg-surface-2 hover:bg-hairline text-brand rounded-[4px] text-xs font-semibold transition-editorial cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Desfazer (Undo)</span>
+            <Undo2 className="w-3.5 h-3.5" />
+            <span>Desfazer (5s)</span>
           </button>
         </div>
       )}
 
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-slate-900/60 p-4 border border-slate-800 rounded-2xl">
-        
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por descrição ou estabelecimento..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-slate-200 placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500 font-medium"
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-slate-300 text-xs font-medium focus:outline-none focus:border-emerald-500"
+      {/* Table Section */}
+      {filteredTransactions.length === 0 ? (
+        <div className="p-12 bg-surface border border-hairline rounded-[12px] text-center space-y-3">
+          <div className="w-10 h-10 rounded-full bg-surface-2 border border-hairline flex items-center justify-center mx-auto text-ink-3">
+            <Inbox className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-display text-base font-medium text-ink">Nenhuma movimentação encontrada</p>
+            <p className="text-xs text-ink-2">Ajuste os filtros ou registre uma nova transação.</p>
+          </div>
+          <button
+            onClick={() => setInternalModalOpen(true)}
+            className="px-3.5 py-1.5 bg-surface-2 hover:bg-hairline text-ink rounded-[6px] text-xs font-medium transition-editorial cursor-pointer"
           >
-            <option value="all">Todas as Categorias</option>
-            {MOCK_CATEGORIES.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.icon} {cat.name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={selectedAccount}
-            onChange={(e) => setSelectedAccount(e.target.value)}
-            className="px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-slate-300 text-xs font-medium focus:outline-none focus:border-emerald-500"
-          >
-            <option value="all">Todas as Contas</option>
-            {MOCK_ACCOUNTS.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                {acc.name}
-              </option>
-            ))}
-          </select>
+            Adicionar Transação
+          </button>
         </div>
-      </div>
-
-      {/* Transactions Table */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/80 uppercase text-[10px] text-slate-400 font-bold border-b border-slate-800">
-              <tr>
-                <th className="px-5 py-3.5">Data / Descrição</th>
-                <th className="px-4 py-3.5">Categoria</th>
-                <th className="px-4 py-3.5">Conta</th>
-                <th className="px-4 py-3.5">Rateio (Casal)</th>
-                <th className="px-4 py-3.5 text-right">Valor</th>
-                <th className="px-4 py-3.5 text-center">Versão</th>
-                <th className="px-4 py-3.5 text-right">Ações</th>
+      ) : (
+        <div className="bg-surface border border-hairline rounded-[12px] overflow-hidden shadow-sm">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-hairline bg-surface-2/60 text-ink-3">
+                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Data</th>
+                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Descrição</th>
+                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Categoria</th>
+                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px]">Conta</th>
+                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Valor</th>
+                <th className="py-2.5 px-4 font-semibold uppercase tracking-[0.08em] text-[10px] text-right">Ação</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {filtered.map((tx) => {
-                const category = MOCK_CATEGORIES.find((c) => c.id === tx.categoryId);
-                const account = MOCK_ACCOUNTS.find((a) => a.id === tx.accountId);
-
-                return (
-                  <tr key={tx.id} className="hover:bg-slate-800/40 transition">
-                    
-                    {/* Descrição & Data */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-2 rounded-xl border ${
-                            tx.type === 'income'
-                              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                              : tx.type === 'expense'
-                              ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                              : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
-                          }`}
-                        >
-                          {tx.type === 'income' ? (
-                            <ArrowDownLeft className="w-4 h-4" />
-                          ) : tx.type === 'expense' ? (
-                            <ArrowUpRight className="w-4 h-4" />
-                          ) : (
-                            <ArrowRightLeft className="w-4 h-4" />
-                          )}
-                        </div>
-
-                        <div>
-                          <div className="font-semibold text-slate-200 text-sm flex items-center gap-2">
-                            <span>{tx.description}</span>
-                            {tx.merchant && (
-                              <span className="text-[10px] font-normal px-1.5 py-0.5 bg-slate-800 rounded text-slate-400">
-                                {tx.merchant}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 font-mono">
-                            <Calendar className="w-3 h-3 text-slate-600" />
-                            <span>{tx.date}</span>
-                            {tx.tags.length > 0 && (
-                              <span className="text-[10px] text-slate-400 bg-slate-950 px-1.5 py-0.2 rounded border border-slate-800">
-                                #{tx.tags[0]}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Categoria */}
-                    <td className="px-4 py-4">
-                      {category ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 font-medium text-slate-300">
-                          <span>{category.icon}</span>
-                          <span>{category.name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-500 italic">Sem categoria</span>
-                      )}
-                    </td>
-
-                    {/* Conta */}
-                    <td className="px-4 py-4">
-                      <span className="text-slate-300 font-medium">{account?.name || '—'}</span>
-                    </td>
-
-                    {/* Rateio Casal (Permilagem) */}
-                    <td className="px-4 py-4">
-                      {tx.split ? (
-                        <div className="flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-lg w-fit">
-                          <Users className="w-3 h-3" />
-                          <span>500‰ / 500‰ (50%)</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-500 text-[11px]">Individual</span>
-                      )}
-                    </td>
-
-                    {/* Valor */}
-                    <td className="px-4 py-4 text-right font-mono font-bold text-sm">
-                      <span
-                        className={
-                          tx.type === 'income'
-                            ? 'text-emerald-400'
-                            : tx.type === 'expense'
-                            ? 'text-slate-100'
-                            : 'text-indigo-400'
-                        }
-                      >
-                        {tx.type === 'expense' ? '-' : '+'}
-                        {formatCentsToBRL(tx.amountCents)}
-                      </span>
-                    </td>
-
-                    {/* Versão (Crachá interativo de Histórico) */}
-                    <td className="px-4 py-4 text-center">
-                      {tx.version > 1 ? (
-                        <button
-                          onClick={() => setSelectedHistory(MOCK_HISTORY[0])}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded font-mono text-[10px] font-bold transition"
-                          title="Clique para ver histórico de alterações"
-                        >
-                          <History className="w-3 h-3" />
-                          <span>v{tx.version}</span>
-                        </button>
-                      ) : (
-                        <span className="font-mono text-[10px] text-slate-500">v1</span>
-                      )}
-                    </td>
-
-                    {/* Ações */}
-                    <td className="px-4 py-4 text-right">
-                      <button
-                        onClick={() => handleDelete(tx.id)}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
-                        title="Remover transação (Soft Delete)"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-
-                  </tr>
-                );
-              })}
+            <tbody className="divide-y divide-hairline">
+              {filteredTransactions.map((tx) => (
+                <tr key={tx.id} className="h-12 hover:bg-surface-2 transition-editorial group">
+                  <td className="py-2.5 px-4 font-mono text-ink-3 text-[11px] whitespace-nowrap">
+                    {formatRelativeDate(tx.occurred_at)}
+                  </td>
+                  <td className="py-2.5 px-4 font-medium text-ink">
+                    {tx.description}
+                  </td>
+                  <td className="py-2.5 px-4 text-ink-2">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[11px]">
+                      <CategoryIcon name={tx.category?.icon || 'tag'} size={12} className="text-ink-2" />
+                      <span>{tx.category?.name || 'Geral'}</span>
+                    </div>
+                  </td>
+                  <td className="py-2.5 px-4 text-ink-3 text-[11px]">
+                    {tx.account?.name || 'Principal'}
+                  </td>
+                  <td className="py-2.5 px-4 text-right font-mono font-medium text-xs tnum whitespace-nowrap">
+                    <span className={tx.type === 'income' ? 'text-brand' : 'text-danger'}>
+                      {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-4 text-right">
+                    <button
+                      onClick={() => handleDelete(tx)}
+                      className="p-1 text-ink-3 hover:text-danger opacity-0 group-hover:opacity-100 transition-editorial cursor-pointer rounded-[4px]"
+                      title="Excluir transação"
+                      aria-label="Excluir"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      </div>
+      )}
 
-      {/* History Drawer / Modal */}
-      {selectedHistory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
-                <History className="w-4 h-4" />
-                <span>Histórico da Transação (Audit Trail)</span>
+      {/* Modal: Nova Transação */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4">
+          <div className="w-full max-w-lg bg-surface border border-hairline rounded-[12px] p-6 shadow-md space-y-4">
+            
+            <div className="flex items-center justify-between border-b border-hairline pb-3">
+              <div className="flex items-center gap-2">
+                <Plus className="w-4 h-4 text-brand stroke-[2.5]" />
+                <h2 className="font-display font-medium text-lg text-ink">Nova Transação</h2>
               </div>
-              <button onClick={() => setSelectedHistory(null)} className="text-slate-400 hover:text-slate-200">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
-                <span className="text-[10px] uppercase font-bold text-amber-400">Versão Anterior (v1)</span>
-                <p className="font-semibold text-slate-200">{selectedHistory.snapshot.description}</p>
-                <p className="font-mono text-slate-400">Valor Original: {formatCentsToBRL(selectedHistory.snapshot.amountCents)}</p>
-                <p className="text-[10px] text-slate-500 font-mono">Modificado em: {selectedHistory.createdAt}</p>
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end">
               <button
-                onClick={() => setSelectedHistory(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold"
+                onClick={handleCloseModal}
+                className="p-1 text-ink-3 hover:text-ink rounded-[4px] transition-editorial"
+                aria-label="Fechar"
               >
-                Fechar
+                <X className="w-4 h-4" />
               </button>
             </div>
+
+            {error && (
+              <div className="p-3 bg-surface-2 border border-hairline rounded-[6px] flex items-center gap-2 text-xs text-danger">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreate} className="space-y-3.5">
+              
+              {/* Type Switcher */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-surface-2 border border-hairline rounded-[6px]">
+                <button
+                  type="button"
+                  onClick={() => setType('expense')}
+                  className={`py-1.5 text-xs font-semibold rounded-[4px] transition-editorial ${
+                    type === 'expense'
+                      ? 'bg-surface text-danger shadow-sm'
+                      : 'text-ink-3 hover:text-ink'
+                  }`}
+                >
+                  Despesa (−)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('income')}
+                  className={`py-1.5 text-xs font-semibold rounded-[4px] transition-editorial ${
+                    type === 'income'
+                      ? 'bg-surface text-brand shadow-sm'
+                      : 'text-ink-3 hover:text-ink'
+                  }`}
+                >
+                  Receita (+)
+                </button>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1">
+                <label className="block micro-label">Descrição</label>
+                <input
+                  type="text"
+                  required
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Ex: Supermercado Pão de Açúcar"
+                  className="w-full px-3 py-2 bg-paper border border-hairline rounded-[6px] text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
+                />
+              </div>
+
+              {/* Amount & Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block micro-label">Valor (R$)</label>
+                  <input
+                    type="text"
+                    required
+                    value={amountStr}
+                    onChange={(e) => setAmountStr(e.target.value)}
+                    placeholder="0,00"
+                    className="w-full px-3 py-2 bg-paper border border-hairline rounded-[6px] text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial font-mono tnum"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block micro-label">Data</label>
+                  <input
+                    type="date"
+                    required
+                    value={occurredAt}
+                    onChange={(e) => setOccurredAt(e.target.value)}
+                    className="w-full px-3 py-2 bg-paper border border-hairline rounded-[6px] text-sm text-ink focus:outline-none focus:border-ink transition-editorial font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Account & Category */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block micro-label">Conta</label>
+                  <select
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-paper border border-hairline rounded-[6px] text-xs text-ink focus:outline-none focus:border-ink"
+                  >
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block micro-label">Categoria</label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-paper border border-hairline rounded-[6px] text-xs text-ink focus:outline-none focus:border-ink"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-hairline">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="px-3.5 py-2 text-xs font-medium text-ink-2 hover:text-ink transition-editorial"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-brand hover:bg-brand/90 disabled:opacity-50 text-paper font-semibold text-xs rounded-[6px] shadow-sm flex items-center gap-1.5 transition-editorial cursor-pointer"
+                >
+                  <span>{loading ? 'Salvando...' : 'Salvar Transação'}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+            </form>
+
           </div>
         </div>
       )}

@@ -1,202 +1,203 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useHouseholdData } from '@/hooks/useHouseholdData';
 import { Header } from '@/components/Header';
-import { QuickAddModal } from '@/components/QuickAddModal';
+import { DashboardModule } from '@/components/DashboardModule';
 import { TransactionsModule } from '@/components/TransactionsModule';
 import { BudgetModule } from '@/components/BudgetModule';
-import { DashboardModule } from '@/components/DashboardModule';
-import { AIChatDrawer } from '@/components/AIChatDrawer';
-import { ImportWizardModal } from '@/components/ImportWizardModal';
-import { ReceiptOCRModal } from '@/components/ReceiptOCRModal';
 import { GoalsDebtsModule } from '@/components/GoalsDebtsModule';
-import {
-  generateMockTransactions,
-  TransactionMock,
-  MOCK_ACCOUNTS,
-} from '@equilibrium/db';
-import { LayoutDashboard, Receipt, PieChart, Upload, Camera, Target } from 'lucide-react';
+import { QuickAddModal } from '@/components/QuickAddModal';
+import { InvitePartnerModal } from '@/components/InvitePartnerModal';
+import { LayoutDashboard, Receipt, PieChart, Target } from 'lucide-react';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budget' | 'goals'>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [isOCROpen, setIsOCROpen] = useState(false);
-  const [transactions, setTransactions] = useState<TransactionMock[]>(generateMockTransactions());
+  const [isNewTxOpen, setIsNewTxOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
 
-  // Calcula patrimônio líquido
-  const netWorthCents = MOCK_ACCOUNTS.reduce((sum, acc) => sum + acc.balanceCents, 0);
+  const {
+    householdName,
+    userProfile,
+    partners,
+    accounts,
+    categories,
+    transactions,
+    budgets,
+    goals,
+    debts,
+    netWorthCents,
+    loading,
+    refetch,
+  } = useHouseholdData();
 
-  const handleAddTransaction = (newTx: Partial<TransactionMock>) => {
-    const tx: TransactionMock = {
-      id: `tx-${Date.now()}`,
-      accountId: newTx.accountId || MOCK_ACCOUNTS[0].id,
-      categoryId: newTx.categoryId || null,
-      type: newTx.type || 'expense',
-      amountCents: newTx.amountCents || 1000,
-      date: newTx.date || new Date().toISOString().split('T')[0],
-      description: newTx.description || 'Nova Transação',
-      merchant: newTx.merchant || null,
-      notes: newTx.notes || null,
-      tags: newTx.tags || [],
-      source: newTx.source || 'manual',
-      version: 1,
-      createdById: 'prof-alex-uuid',
+  // Atalho global ⌘K para Quick Add
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsQuickAddOpen((prev) => !prev);
+      }
     };
-
-    setTransactions((prev) => [tx, ...prev]);
-  };
-
-  const handleImportBatch = (batch: Partial<TransactionMock>[]) => {
-    batch.forEach((item) => handleAddTransaction(item));
-  };
-
-  const handleUpdateTransaction = (id: string, updated: Partial<TransactionMock>) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updated, version: t.version + 1 } : t))
-    );
-  };
-
-  const handleSoftDeleteTransaction = (id: string) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, deletedAt: new Date().toISOString() } : t))
-    );
-  };
-
-  const handleRestoreTransaction = (id: string) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, deletedAt: null } : t))
-    );
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased pb-12">
+    <div className="min-h-screen bg-paper text-ink flex flex-col">
       
-      {/* Header */}
+      {/* Header com dados reais e avatar */}
       <Header
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
-        onOpenNewTransaction={() => setActiveTab('transactions')}
+        onOpenNewTransaction={() => {
+          setActiveTab('transactions');
+          setIsNewTxOpen(true);
+        }}
+        onOpenInvite={() => setIsInviteOpen(true)}
         netWorthCents={netWorthCents}
+        householdName={householdName}
+        userProfile={userProfile}
       />
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-6 pt-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         
-        {/* Navigation Tabs & Utility Modals Trigger */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-3">
-          
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                activeTab === 'dashboard'
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard & Insights (M4)</span>
-            </button>
+        {/* Navigation Tabs (Sem códigos M2/M3) */}
+        <nav className="flex items-center gap-1 border-b border-hairline pb-2 overflow-x-auto text-xs">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+              activeTab === 'dashboard'
+                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                : 'text-ink-2 hover:text-ink hover:bg-surface-2'
+            }`}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5 stroke-[1.5]" />
+            <span>Dashboard</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('transactions')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                activeTab === 'transactions'
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
-            >
-              <Receipt className="w-4 h-4" />
-              <span>Transações (M2)</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('transactions')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+              activeTab === 'transactions'
+                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                : 'text-ink-2 hover:text-ink hover:bg-surface-2'
+            }`}
+          >
+            <Receipt className="w-3.5 h-3.5 stroke-[1.5]" />
+            <span>Transações</span>
+            {transactions.length > 0 && (
+              <span className="font-mono text-[10px] px-1.5 py-0.2 bg-surface-2 rounded-[4px] text-ink-3">
+                {transactions.length}
+              </span>
+            )}
+          </button>
 
-            <button
-              onClick={() => setActiveTab('budget')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                activeTab === 'budget'
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
-            >
-              <PieChart className="w-4 h-4" />
-              <span>Orçamento Duplo (M3)</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('budget')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+              activeTab === 'budget'
+                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                : 'text-ink-2 hover:text-ink hover:bg-surface-2'
+            }`}
+          >
+            <PieChart className="w-3.5 h-3.5 stroke-[1.5]" />
+            <span>Orçamento Duplo</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab('goals')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                activeTab === 'goals'
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
-            >
-              <Target className="w-4 h-4" />
-              <span>Metas & Dívidas (M9)</span>
-            </button>
+          <button
+            onClick={() => setActiveTab('goals')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+              activeTab === 'goals'
+                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                : 'text-ink-2 hover:text-ink hover:bg-surface-2'
+            }`}
+          >
+            <Target className="w-3.5 h-3.5 stroke-[1.5]" />
+            <span>Metas & Dívidas</span>
+          </button>
+        </nav>
+
+        {/* Loading Skeleton */}
+        {loading && (
+          <div className="space-y-6 animate-pulse">
+            <div className="h-20 bg-surface-2 border border-hairline rounded-[12px]" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-8 h-72 bg-surface-2 border border-hairline rounded-[12px]" />
+              <div className="lg:col-span-4 h-72 bg-surface-2 border border-hairline rounded-[12px]" />
+            </div>
           </div>
-
-          {/* Import & OCR Quick Buttons */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsImportOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-xs font-medium text-slate-300 transition"
-              title="Importar extrato CSV, OFX ou QIF"
-            >
-              <Upload className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Importar Extrato</span>
-            </button>
-
-            <button
-              onClick={() => setIsOCROpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl text-xs font-medium text-slate-300 transition"
-              title="Digitalizar foto de recibo com OCR"
-            >
-              <Camera className="w-3.5 h-3.5 text-emerald-400" />
-              <span>OCR Recibo</span>
-            </button>
-          </div>
-
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'dashboard' && <DashboardModule />}
-        {activeTab === 'transactions' && (
-          <TransactionsModule
-            transactions={transactions}
-            onAddTransaction={handleAddTransaction}
-            onUpdateTransaction={handleUpdateTransaction}
-            onSoftDeleteTransaction={handleSoftDeleteTransaction}
-            onRestoreTransaction={handleRestoreTransaction}
-          />
         )}
-        {activeTab === 'budget' && <BudgetModule />}
-        {activeTab === 'goals' && <GoalsDebtsModule />}
+
+        {/* Active Tab View */}
+        {!loading && (
+          <>
+            {activeTab === 'dashboard' && (
+              <DashboardModule
+                accounts={accounts}
+                categories={categories}
+                transactions={transactions}
+                partners={partners}
+                netWorthCents={netWorthCents}
+                onOpenNewTransaction={() => {
+                  setActiveTab('transactions');
+                  setIsNewTxOpen(true);
+                }}
+              />
+            )}
+
+            {activeTab === 'transactions' && (
+              <TransactionsModule
+                accounts={accounts}
+                categories={categories}
+                transactions={transactions}
+                userProfile={userProfile}
+                onRefresh={refetch}
+                isNewModalOpen={isNewTxOpen}
+                onCloseNewModal={() => setIsNewTxOpen(false)}
+              />
+            )}
+
+            {activeTab === 'budget' && (
+              <BudgetModule
+                categories={categories}
+                transactions={transactions}
+                budgets={budgets}
+                onOpenNewTransaction={() => {
+                  setActiveTab('transactions');
+                  setIsNewTxOpen(true);
+                }}
+              />
+            )}
+
+            {activeTab === 'goals' && (
+              <GoalsDebtsModule
+                goals={goals}
+                debts={debts}
+              />
+            )}
+          </>
+        )}
 
       </main>
 
-      {/* Quick Add NLP Modal */}
+      {/* Quick Add Modal (⌘K) */}
       <QuickAddModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
-        onAddTransaction={handleAddTransaction}
+        onSuccess={refetch}
+        accounts={accounts}
+        categories={categories}
+        userProfile={userProfile}
       />
 
-      {/* Import Wizard Modal */}
-      <ImportWizardModal
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        onImportBatch={handleImportBatch}
+      {/* Invite Partner Modal */}
+      <InvitePartnerModal
+        isOpen={isInviteOpen}
+        onClose={() => setIsInviteOpen(false)}
+        userProfile={userProfile}
       />
-
-      {/* OCR Receipt Modal */}
-      <ReceiptOCRModal
-        isOpen={isOCROpen}
-        onClose={() => setIsOCROpen(false)}
-        onConfirmOCR={handleAddTransaction}
-      />
-
-      {/* AI Chat Drawer & Approval Flow */}
-      <AIChatDrawer onAddTransaction={handleAddTransaction} />
 
     </div>
   );

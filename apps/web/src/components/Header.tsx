@@ -1,96 +1,154 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { formatCentsToBRL } from '@equilibrium/ui';
-import { MOCK_PROFILES } from '@equilibrium/db';
-import { Sparkles, Plus, Command, Moon, Sun, Scale, ShieldCheck } from 'lucide-react';
+import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut } from 'lucide-react';
+import { Profile } from '@/hooks/useHouseholdData';
 
 interface HeaderProps {
   onOpenQuickAdd: () => void;
   onOpenNewTransaction: () => void;
+  onOpenInvite: () => void;
   netWorthCents: number;
+  householdName: string;
+  userProfile: Profile | null;
 }
 
-export function Header({ onOpenQuickAdd, onOpenNewTransaction, netWorthCents }: HeaderProps) {
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const activeProfile = MOCK_PROFILES[0]; // Alex
+export function Header({
+  onOpenQuickAdd,
+  onOpenNewTransaction,
+  onOpenInvite,
+  netWorthCents,
+  householdName,
+  userProfile,
+}: HeaderProps) {
+  const router = useRouter();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark');
+    setIsDarkMode(isDark);
+  }, []);
 
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
+    const nextDark = !isDarkMode;
+    setIsDarkMode(nextDark);
+    if (nextDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('equilibrium-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('equilibrium-theme', 'light');
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'EQ';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   };
 
   return (
-    <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40 px-6 py-4">
+    <header className="border-b border-hairline bg-paper/90 sticky top-0 z-40 px-6 py-3.5">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         
         {/* Brand & Household Selector */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xl px-3 py-1.5 rounded-xl shadow-lg shadow-emerald-500/20">
-            <Scale className="w-6 h-6 stroke-[2.5]" />
-            <span>Equilibrium</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-base shadow-sm">
+            <Scale className="w-4 h-4 text-brand stroke-[2]" />
+            <span className="font-display tracking-tight">Equilibrium</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-slate-800/60 border border-slate-700/60 rounded-lg text-xs text-slate-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-medium text-slate-200">Nosso Casa</span>
-            <span className="text-slate-500">|</span>
-            <span className="text-slate-400 font-mono">BRL (R$)</span>
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-surface-2 border border-hairline rounded-[4px] text-xs text-ink-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
+            <span className="font-medium text-ink">{householdName}</span>
+            <span className="text-ink-3">|</span>
+            <span className="text-ink-3 font-mono text-[11px]">BRL (R$)</span>
           </div>
         </div>
 
-        {/* Net Worth Badge & Controls */}
-        <div className="flex items-center gap-3">
+        {/* Actions & Profile Controls */}
+        <div className="flex items-center gap-2.5">
           
-          {/* Net Worth Summary */}
-          <div className="hidden md:flex flex-col items-end px-4 py-1 bg-slate-800/40 border border-slate-800 rounded-xl">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Patrimônio Líquido</span>
-            <span className="text-sm font-bold font-mono text-emerald-400">
+          {/* Net Worth Summary Badge */}
+          <div className="hidden md:flex flex-col items-end px-3 py-1 bg-surface border border-hairline rounded-[6px]">
+            <span className="micro-label">Patrimônio Líquido</span>
+            <span className="text-xs font-semibold font-mono text-ink tnum">
               {formatCentsToBRL(netWorthCents)}
             </span>
           </div>
 
-          {/* Quick-Add NLP Button (⌘K) */}
+          {/* Quick-Add Button (⌘K) */}
           <button
             onClick={onOpenQuickAdd}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 transition shadow-sm"
-            title="Adicionar rápido em linguagem natural (⌘K)"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline rounded-[6px] text-xs font-medium text-ink transition-editorial cursor-pointer shadow-sm"
+            title="Adicionar rápido (⌘K)"
           >
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span className="hidden sm:inline">Quick Add</span>
-            <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-[10px] font-mono text-slate-400">
-              <Command className="w-3 h-3" /> K
+            <span className="hidden sm:inline">Adicionar Rápido</span>
+            <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[10px] font-mono text-ink-3">
+              <Command className="w-2.5 h-2.5" /> K
             </kbd>
           </button>
 
           {/* New Transaction Button */}
           <button
             onClick={onOpenNewTransaction}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 transition"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial cursor-pointer shadow-sm"
           >
-            <Plus className="w-4 h-4 stroke-[3]" />
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Transação</span>
           </button>
 
-          {/* Dark/Light Mode Toggle */}
+          {/* Invite Partner Button */}
           <button
-            onClick={toggleTheme}
-            className="p-2 text-slate-400 hover:text-slate-200 bg-slate-800/60 border border-slate-700/60 rounded-xl transition"
-            aria-label="Alternar Tema"
+            onClick={onOpenInvite}
+            className="p-1.5 text-ink-2 hover:text-ink bg-surface hover:bg-surface-2 border border-hairline rounded-[6px] transition-editorial cursor-pointer"
+            title="Convidar parceiro para o casal"
+            aria-label="Convidar parceiro"
           >
-            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-400" />}
+            <UserPlus className="w-4 h-4 stroke-[1.5]" />
           </button>
 
-          {/* Profile Badge */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <img
-              src={activeProfile.avatarUrl}
-              alt={activeProfile.fullName}
-              width={32}
-              height={32}
-              style={{ width: '32px', height: '32px', borderRadius: '9999px', objectFit: 'cover' }}
-              className="w-8 h-8 rounded-full border border-emerald-500/50 object-cover"
-            />
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 text-ink-2 hover:text-ink bg-surface hover:bg-surface-2 border border-hairline rounded-[6px] transition-editorial cursor-pointer"
+            aria-label="Alternar Tema Claro/Escuro"
+            title={isDarkMode ? 'Mudar para Tema Claro' : 'Mudar para Tema Escuro'}
+          >
+            {isDarkMode ? <Sun className="w-4 h-4 text-warning stroke-[1.5]" /> : <Moon className="w-4 h-4 stroke-[1.5]" />}
+          </button>
+
+          {/* User Initials Avatar & Logout */}
+          <div className="flex items-center gap-2 pl-2 border-l border-hairline">
+            <div
+              className="w-7 h-7 rounded-full bg-surface-2 border border-hairline flex items-center justify-center font-semibold text-[11px] text-ink"
+              title={userProfile?.full_name || 'Usuário'}
+            >
+              {getInitials(userProfile?.full_name)}
+            </div>
+
+            <button
+              onClick={handleLogout}
+              className="p-1.5 text-ink-3 hover:text-danger rounded-[4px] transition-editorial cursor-pointer"
+              title="Sair da conta"
+              aria-label="Encerrar sessão"
+            >
+              <LogOut className="w-3.5 h-3.5 stroke-[1.5]" />
+            </button>
           </div>
 
         </div>

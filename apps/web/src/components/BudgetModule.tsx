@@ -1,206 +1,218 @@
 'use client';
 
 import React from 'react';
-import { formatCentsToBRL } from '@equilibrium/ui';
-import { MOCK_CATEGORIES } from '@equilibrium/db';
-import { Target, AlertTriangle, AlertCircle, CheckCircle2, TrendingUp, Layers, RefreshCw } from 'lucide-react';
+import { formatCentsToBRL, CategoryIcon } from '@equilibrium/ui';
+import { Category, Transaction, Budget } from '@/hooks/useHouseholdData';
+import { PieChart, AlertTriangle, CheckCircle2, Inbox } from 'lucide-react';
 
-export function BudgetModule() {
-  const envelopeCategories = MOCK_CATEGORIES.filter((c) => c.budgetStyle === 'envelope');
-  const flexCategories = MOCK_CATEGORIES.filter((c) => c.budgetStyle === 'flex' && c.kind === 'expense');
-  const fixedCategories = MOCK_CATEGORIES.filter((c) => c.budgetStyle === 'fixed');
+interface BudgetModuleProps {
+  categories: Category[];
+  transactions: Transaction[];
+  budgets: Budget[];
+  onOpenNewTransaction: () => void;
+}
 
-  const totalLimit = MOCK_CATEGORIES.reduce((sum, c) => sum + (c.kind === 'expense' ? c.limitCents : 0), 0);
-  const totalSpent = MOCK_CATEGORIES.reduce((sum, c) => sum + (c.kind === 'expense' ? c.spentCents : 0), 0);
-  const overallPercentage = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
+export function BudgetModule({
+  categories,
+  transactions,
+  budgets,
+  onOpenNewTransaction,
+}: BudgetModuleProps) {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  // Despesas do mês corrente
+  const currentMonthExpenses = transactions.filter((t) => {
+    const d = new Date(t.occurred_at);
+    return t.type === 'expense' && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  // Mapeamento de orçamento por categoria (se não existir registro explícito, usa padrão de teto de R$ 1.500)
+  const budgetMap = new Map<string, number>();
+  budgets.forEach((b) => budgetMap.set(b.category_id, b.limit_cents));
+
+  const budgetCategories = categories.map((cat) => {
+    const spentCents = currentMonthExpenses
+      .filter((t) => t.category_id === cat.id)
+      .reduce((acc, t) => acc + t.amount_cents, 0);
+
+    const limitCents = budgetMap.get(cat.id) || 150000; // R$ 1.500,00 default
+    const percentage = Math.min(100, Math.round((spentCents / limitCents) * 100));
+    const isOver = spentCents > limitCents;
+    const isWarning = percentage >= 80 && !isOver;
+
+    return {
+      ...cat,
+      spentCents,
+      limitCents,
+      percentage,
+      isOver,
+      isWarning,
+    };
+  });
+
+  const totalBudgetLimit = budgetCategories.reduce((acc, c) => acc + c.limitCents, 0);
+  const totalBudgetSpent = budgetCategories.reduce((acc, c) => acc + c.spentCents, 0);
+  const totalPercentage = Math.min(100, Math.round((totalBudgetSpent / totalBudgetLimit) * 100));
+
+  const envelopeCategories = budgetCategories.filter((c) => c.type === 'envelope');
+  const flexCategories = budgetCategories.filter((c) => c.type === 'flex');
+  const fixedCategories = budgetCategories.filter((c) => c.type === 'fixed');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       
-      {/* Overview Banner */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider">
-            <Target className="w-4 h-4" />
-            <span>Motor de Orçamento Duplo (Envelope + Flex + Fixo)</span>
+      {/* Header & Global Progress */}
+      <div className="border-b border-hairline pb-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span className="micro-label">Planejamento Duplo</span>
+            <h1 className="font-display text-2xl font-medium tracking-tight text-ink">
+              Orçamento do Casal
+            </h1>
           </div>
-          <h2 className="text-2xl font-bold text-slate-100">Visão Geral de Orçamento do Mês</h2>
-          <p className="text-xs text-slate-400 max-w-xl">
-            Acompanhe a alocação dos seus envelopes e limites flexíveis. Alertas são acionados automaticamente ao atingir 80% do teto.
-          </p>
+          <div className="flex items-center gap-2 font-mono text-sm tnum text-ink">
+            <span>{formatCentsToBRL(totalBudgetSpent)}</span>
+            <span className="text-ink-3">/</span>
+            <span className="text-ink-2">{formatCentsToBRL(totalBudgetLimit)}</span>
+            <span className="text-xs font-semibold px-2 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-brand">
+              {totalPercentage}%
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-6 bg-slate-950/80 border border-slate-800 px-6 py-4 rounded-2xl w-full lg:w-auto justify-between lg:justify-start">
-          <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500">Teto Total</span>
-            <p className="font-mono font-bold text-slate-200 text-lg">{formatCentsToBRL(totalLimit)}</p>
-          </div>
-          <div className="w-px h-8 bg-slate-800"></div>
-          <div className="space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500">Consumido</span>
-            <p className={`font-mono font-bold text-lg ${overallPercentage > 100 ? 'text-rose-400' : overallPercentage > 80 ? 'text-amber-400' : 'text-emerald-400'}`}>
-              {formatCentsToBRL(totalSpent)} ({overallPercentage}%)
-            </p>
-          </div>
+        {/* Global Progress Bar */}
+        <div className="w-full h-2 bg-surface-2 border border-hairline rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 ${
+              totalPercentage > 90 ? 'bg-danger' : totalPercentage > 75 ? 'bg-warning' : 'bg-brand'
+            }`}
+            style={{ width: `${totalPercentage}%` }}
+          />
         </div>
       </div>
 
-      {/* Grid das 3 Modalidades de Orçamento */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* 1. Categorias Envelope (YNAB / Actual style) */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2 font-bold text-slate-200 text-sm">
-              <span className="p-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg">✉️</span>
-              <span>Envelopes (Alocação Estrita)</span>
-            </div>
-            <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">YNAB Style</span>
+      {categories.length === 0 ? (
+        <div className="p-12 bg-surface border border-hairline rounded-[12px] text-center space-y-3">
+          <div className="w-10 h-10 rounded-full bg-surface-2 border border-hairline flex items-center justify-center mx-auto text-ink-3">
+            <Inbox className="w-5 h-5" />
           </div>
-
-          <div className="space-y-4">
-            {envelopeCategories.map((cat) => {
-              const pct = cat.limitCents > 0 ? Math.round((cat.spentCents / cat.limitCents) * 100) : 0;
-              const isWarning = pct >= 80 && pct < 100;
-              const isDanger = pct >= 100;
-
-              return (
-                <div key={cat.id} className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 font-semibold text-slate-200">
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 font-mono text-xs">
-                      <span className={isDanger ? 'text-rose-400 font-bold' : isWarning ? 'text-amber-400 font-bold' : 'text-slate-300'}>
-                        {formatCentsToBRL(cat.spentCents)}
-                      </span>
-                      <span className="text-slate-500">/ {formatCentsToBRL(cat.limitCents)}</span>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${
-                        isDanger ? 'bg-rose-500' : isWarning ? 'bg-amber-400' : 'bg-emerald-400'
-                      }`}
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    ></div>
-                  </div>
-
-                  {/* Alertas */}
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-slate-500">Envelope acumulativo</span>
-                    {isDanger ? (
-                      <span className="flex items-center gap-1 text-rose-400 font-bold">
-                        <AlertCircle className="w-3 h-3" /> Teto estourado (+{pct - 100}%)
-                      </span>
-                    ) : isWarning ? (
-                      <span className="flex items-center gap-1 text-amber-400 font-bold">
-                        <AlertTriangle className="w-3 h-3" /> Alerta &gt;80% consumido
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                        <CheckCircle2 className="w-3 h-3" /> Dentro da meta ({pct}%)
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-1">
+            <p className="font-display text-base font-medium text-ink">Nenhuma categoria cadastrada</p>
+            <p className="text-xs text-ink-2">Cadastre suas primeiras categorias para acompanhar os limites.</p>
           </div>
         </div>
-
-        {/* 2. Categorias Flex (Monarch style) */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2 font-bold text-slate-200 text-sm">
-              <span className="p-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg">📊</span>
-              <span>Flexível (Monarch Style)</span>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Seção 1: Envelope (Mercado, Gastos Essenciais) */}
+          <div className="bg-surface border border-hairline rounded-[12px] p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+              <div>
+                <span className="micro-label">Modelo Envelope</span>
+                <h2 className="font-display text-base font-medium text-ink">Essenciais & Rotina</h2>
+              </div>
+              <span className="text-[10px] font-mono text-ink-3 bg-surface-2 px-2 py-0.5 rounded-[4px]">YNAB</span>
             </div>
-            <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">Variável</span>
-          </div>
 
-          <div className="space-y-4">
-            {flexCategories.map((cat) => {
-              const pct = cat.limitCents > 0 ? Math.round((cat.spentCents / cat.limitCents) * 100) : 0;
-
-              return (
-                <div key={cat.id} className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-2">
+            <div className="space-y-3.5">
+              {envelopeCategories.map((cat) => (
+                <div key={cat.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 font-semibold text-slate-200">
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 bg-surface-2 border border-hairline rounded-[4px] text-ink-2">
+                        <CategoryIcon name={cat.icon} size={13} />
+                      </div>
+                      <span className="font-medium text-ink">{cat.name}</span>
                     </div>
-                    <span className="font-mono text-slate-300">
-                      {formatCentsToBRL(cat.spentCents)} <span className="text-slate-500">/ {formatCentsToBRL(cat.limitCents)}</span>
+                    <span className="font-mono tnum text-ink-2">
+                      {formatCentsToBRL(cat.spentCents)} / {formatCentsToBRL(cat.limitCents)}
                     </span>
                   </div>
-
-                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-indigo-400 transition-all duration-500"
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    ></div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-500">
-                    <span>Limite ajustável</span>
-                    <span className="font-mono">{pct}% utilizado</span>
+                      className={`h-full ${cat.isOver ? 'bg-danger' : cat.isWarning ? 'bg-warning' : 'bg-brand'}`}
+                      style={{ width: `${cat.percentage}%` }}
+                    />
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 3. Categorias Fixas */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2 font-bold text-slate-200 text-sm">
-              <span className="p-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg">🔒</span>
-              <span>Despesas Fixas & Recorrentes</span>
+              ))}
             </div>
-            <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">Comprometido</span>
           </div>
 
-          <div className="space-y-4">
-            {fixedCategories.map((cat) => {
-              const pct = cat.limitCents > 0 ? Math.round((cat.spentCents / cat.limitCents) * 100) : 0;
+          {/* Seção 2: Flex (Restaurantes, Lazer, Variáveis) */}
+          <div className="bg-surface border border-hairline rounded-[12px] p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+              <div>
+                <span className="micro-label">Modelo Flexível</span>
+                <h2 className="font-display text-base font-medium text-ink">Estilo de Vida</h2>
+              </div>
+              <span className="text-[10px] font-mono text-ink-3 bg-surface-2 px-2 py-0.5 rounded-[4px]">Monarch</span>
+            </div>
 
-              return (
-                <div key={cat.id} className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-2">
+            <div className="space-y-3.5">
+              {flexCategories.map((cat) => (
+                <div key={cat.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 font-semibold text-slate-200">
-                      <span>{cat.icon}</span>
-                      <span>{cat.name}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 bg-surface-2 border border-hairline rounded-[4px] text-ink-2">
+                        <CategoryIcon name={cat.icon} size={13} />
+                      </div>
+                      <span className="font-medium text-ink">{cat.name}</span>
                     </div>
-                    <span className="font-mono text-emerald-400 font-semibold">
-                      {formatCentsToBRL(cat.spentCents)}
+                    <span className="font-mono tnum text-ink-2">
+                      {formatCentsToBRL(cat.spentCents)} / {formatCentsToBRL(cat.limitCents)}
                     </span>
                   </div>
-
-                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-400 transition-all duration-500"
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    ></div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-slate-500">
-                    <span className="flex items-center gap-1 text-slate-400">
-                      <RefreshCw className="w-3 h-3 text-slate-500" /> Recorrência Mensal
-                    </span>
-                    <span className="font-mono text-emerald-400 font-bold">Pago (100%)</span>
+                      className={`h-full ${cat.isOver ? 'bg-danger' : cat.isWarning ? 'bg-warning' : 'bg-brand'}`}
+                      style={{ width: `${cat.percentage}%` }}
+                    />
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
 
-      </div>
+          {/* Seção 3: Fixed (Moradia, Assinaturas, Fixos) */}
+          <div className="bg-surface border border-hairline rounded-[12px] p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+              <div>
+                <span className="micro-label">Despesas Fixas</span>
+                <h2 className="font-display text-base font-medium text-ink">Compromissos Recorrentes</h2>
+              </div>
+              <span className="text-[10px] font-mono text-ink-3 bg-surface-2 px-2 py-0.5 rounded-[4px]">Contratos</span>
+            </div>
+
+            <div className="space-y-3.5">
+              {fixedCategories.map((cat) => (
+                <div key={cat.id} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 bg-surface-2 border border-hairline rounded-[4px] text-ink-2">
+                        <CategoryIcon name={cat.icon} size={13} />
+                      </div>
+                      <span className="font-medium text-ink">{cat.name}</span>
+                    </div>
+                    <span className="font-mono tnum text-ink-2">
+                      {formatCentsToBRL(cat.spentCents)} / {formatCentsToBRL(cat.limitCents)}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${cat.isOver ? 'bg-danger' : cat.isWarning ? 'bg-warning' : 'bg-brand'}`}
+                      style={{ width: `${cat.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
 
     </div>
   );

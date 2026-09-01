@@ -1,165 +1,226 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { formatCentsToBRL, parseBRLToCents } from '@equilibrium/ui';
-import { Sparkles, X, Check, ArrowRight } from 'lucide-react';
-import { TransactionMock, MOCK_ACCOUNTS, MOCK_CATEGORIES } from '@equilibrium/db';
+import React, { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { formatCentsToBRL, CategoryIcon } from '@equilibrium/ui';
+import { parseBRLToCents } from '@equilibrium/ui';
+import { Account, Category, Profile } from '@/hooks/useHouseholdData';
+import { Command, Check, X, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddTransaction: (tx: Partial<TransactionMock>) => void;
+  onSuccess: () => void;
+  accounts: Account[];
+  categories: Category[];
+  userProfile: Profile | null;
 }
 
-export function QuickAddModal({ isOpen, onClose, onAddTransaction }: QuickAddModalProps) {
-  const [input, setInput] = useState('');
-  const [parsed, setParsed] = useState<{
-    description: string;
-    amountCents: number;
-    type: 'expense' | 'income';
-    categoryId: string;
-    accountId: string;
-  } | null>(null);
-
-  // Esc listener para abrir/fechar com ⌘K
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        if (isOpen) onClose();
-      }
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Parser local síncrono em linguagem natural
-  useEffect(() => {
-    if (!input.trim()) {
-      setParsed(null);
-      return;
-    }
-
-    const text = input.trim();
-    // Procura por valores numéricos tipo 12,50 ou 12.50 ou 120
-    const matchVal = text.match(/(\d+[.,]?\d*)/);
-    const amountCents = matchVal ? parseBRLToCents(matchVal[1]) : 0;
-    
-    // Descrição remove o valor numérico
-    const description = text.replace(/(\d+[.,]?\d*)/, '').trim() || 'Nova Transação';
-
-    // Inferência rápida de tipo e categoria
-    const isIncomeKeyword = /salario|salário|freelance|receita|pix recebido/i.test(text);
-    const type: 'expense' | 'income' = isIncomeKeyword ? 'income' : 'expense';
-
-    let categoryId = MOCK_CATEGORIES[1].id; // default supermercado/groceries
-    if (/café|almoço|jantar|restaurante|pizzaria|burger/i.test(text)) {
-      categoryId = MOCK_CATEGORIES[2].id; // dining
-    } else if (/aluguel|condominio|casa|luz|agua/i.test(text)) {
-      categoryId = MOCK_CATEGORIES[0].id; // housing
-    } else if (isIncomeKeyword) {
-      categoryId = MOCK_CATEGORIES[6].id; // salary
-    }
-
-    setParsed({
-      description: description.charAt(0).toUpperCase() + description.slice(1),
-      amountCents: amountCents > 0 ? amountCents : 1250, // fallback R$ 12,50
-      type,
-      categoryId,
-      accountId: MOCK_ACCOUNTS[0].id,
-    });
-  }, [input]);
+export function QuickAddModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  accounts,
+  categories,
+  userProfile,
+}: QuickAddModalProps) {
+  const [inputStr, setInputStr] = useState('');
+  const [parsedDesc, setParsedDesc] = useState('');
+  const [parsedCents, setParsedCents] = useState(0);
+  const [selectedAccount, setSelectedAccount] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const defaultAccount = accounts[0]?.id || '';
+  const defaultCategory = categories[0]?.id || '';
+  const activeAccountId = selectedAccount || defaultAccount;
+  const activeCategoryId = selectedCategory || defaultCategory;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputStr(val);
+
+    // Parser NLP local: extrai números e descrição
+    const match = val.match(/([a-zA-ZÀ-ÿ\s]+)?\s*([0-9]+(?:[.,][0-9]{1,2})?)/);
+    if (match) {
+      const desc = (match[1] || '').trim();
+      const numStr = match[2] || '';
+      const cents = parseBRLToCents(numStr);
+      setParsedDesc(desc || 'Transação');
+      setParsedCents(cents);
+
+      // Heurística de tipo (ex: "salário", "depósito", "recebido" -> income)
+      const lower = val.toLowerCase();
+      if (lower.includes('salário') || lower.includes('recebi') || lower.includes('depósito') || lower.includes('rendimento')) {
+        setType('income');
+      } else {
+        setType('expense');
+      }
+    } else {
+      setParsedDesc(val);
+      setParsedCents(0);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!parsed) return;
+    if (parsedCents <= 0) {
+      setError('Por favor, informe um valor válido em reais.');
+      return;
+    }
+    if (!activeAccountId || !userProfile?.household_id) {
+      setError('Selecione uma conta válida.');
+      return;
+    }
 
-    onAddTransaction({
-      description: parsed.description,
-      amountCents: parsed.amountCents,
-      type: parsed.type,
-      categoryId: parsed.categoryId,
-      accountId: parsed.accountId,
-      date: new Date().toISOString().split('T')[0],
-      source: 'manual',
-      tags: ['quick-add'],
-    });
+    setLoading(true);
+    setError(null);
+    const supabase = createClient();
 
-    setInput('');
-    onClose();
+    try {
+      const { error: insertError } = await supabase.from('transactions').insert({
+        household_id: userProfile.household_id,
+        account_id: activeAccountId,
+        category_id: activeCategoryId || null,
+        created_by_profile_id: userProfile.id,
+        description: parsedDesc || inputStr || 'Despesa rápida',
+        amount_cents: parsedCents,
+        type: type,
+        occurred_at: new Date().toISOString(),
+      });
+
+      if (insertError) throw insertError;
+
+      setInputStr('');
+      setParsedCents(0);
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Falha ao salvar transação.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4">
+      <div className="w-full max-w-lg bg-surface border border-hairline rounded-[12px] p-6 shadow-md space-y-4">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-900/50">
-          <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-            <Sparkles className="w-4 h-4" />
-            <span>Quick Add em Linguagem Natural</span>
+        <div className="flex items-center justify-between border-b border-hairline pb-3">
+          <div className="flex items-center gap-2">
+            <Command className="w-4 h-4 text-brand" />
+            <h2 className="font-display font-medium text-lg text-ink">Adicionar Rápido (⌘K)</h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
-            <X className="w-5 h-5" />
+          <button
+            onClick={onClose}
+            className="p-1 text-ink-3 hover:text-ink rounded-[4px] transition-editorial"
+            aria-label="Fechar"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Input */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
-              Digite ex: <span className="text-slate-200 font-mono">"Café expresso 12,50"</span> ou <span className="text-slate-200 font-mono">"Almoço 45"</span>
+        {error && (
+          <div className="p-3 bg-surface-2 border border-hairline rounded-[6px] flex items-center gap-2 text-xs text-danger">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* NLP Input Field */}
+          <div className="space-y-1">
+            <label className="block micro-label">
+              Digite em linguagem natural
             </label>
             <input
               type="text"
               autoFocus
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Digite o gasto ou receita..."
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-medium text-base"
+              value={inputStr}
+              onChange={handleInputChange}
+              placeholder="Ex: Almoço 45,50, Mercado 180, Salário 8000"
+              className="w-full px-3.5 py-2.5 bg-paper border border-hairline rounded-[6px] text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
             />
+            <p className="text-[11px] text-ink-3">
+              Dica: O sistema extrai automaticamente a descrição e o valor.
+            </p>
           </div>
 
-          {/* Parsed Preview Card */}
-          {parsed && (
-            <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-3 animate-in fade-in duration-200">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Inferencia Automática:</span>
-                <span className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] ${parsed.type === 'income' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                  {parsed.type === 'income' ? 'Receita' : 'Despesa'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-200 text-sm">{parsed.description}</span>
-                <span className="font-mono font-bold text-emerald-400 text-base">
-                  {formatCentsToBRL(parsed.amountCents)}
+          {/* Realtime Parsing Preview */}
+          {parsedCents > 0 && (
+            <div className="p-3 bg-surface-2 border border-hairline rounded-[6px] space-y-2">
+              <span className="micro-label">Pré-visualização do Registro</span>
+              <div className="flex items-center justify-between text-xs font-semibold text-ink">
+                <span>{parsedDesc || 'Transação'}</span>
+                <span className={`font-mono text-sm tnum ${type === 'income' ? 'text-brand' : 'text-danger'}`}>
+                  {type === 'income' ? '+' : '−'}{formatCentsToBRL(parsedCents)}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-2">
+          {/* Metadata Controls */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            
+            {/* Account Select */}
+            <div className="space-y-1">
+              <label className="block micro-label">Conta</label>
+              <select
+                value={activeAccountId}
+                onChange={(e) => setSelectedAccount(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-paper border border-hairline rounded-[6px] text-xs text-ink focus:outline-none focus:border-ink"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.visibility === 'shared' ? 'Conjunta' : 'Privada'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Select */}
+            <div className="space-y-1">
+              <label className="block micro-label">Categoria</label>
+              <select
+                value={activeCategoryId}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-paper border border-hairline rounded-[6px] text-xs text-ink focus:outline-none focus:border-ink"
+              >
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-2 border-t border-hairline">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+              className="px-3.5 py-2 text-xs font-medium text-ink-2 hover:text-ink transition-editorial"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={!parsed}
-              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20"
+              disabled={loading || parsedCents <= 0}
+              className="px-4 py-2 bg-brand hover:bg-brand/90 disabled:opacity-50 text-paper font-semibold text-xs rounded-[6px] shadow-sm flex items-center gap-1.5 transition-editorial cursor-pointer"
             >
-              <span>Criar Transação</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>{loading ? 'Salvando...' : 'Confirmar e Salvar'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
+
         </form>
 
       </div>
