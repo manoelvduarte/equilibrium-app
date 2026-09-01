@@ -24,7 +24,6 @@ import {
   RotateCcw,
   ImageIcon,
   AlertCircle,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
 } from 'lucide-react-native';

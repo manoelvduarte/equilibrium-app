@@ -47,7 +47,11 @@ export async function executeApprovedToolCore({
   try {
     switch (toolName) {
       case 'create_transaction': {
-        const validated = createTransactionToolSchema.parse(args);
+        const payloadWithDefault = {
+          ...args,
+          date: args.date || new Date().toISOString().split('T')[0],
+        };
+        const validated = createTransactionToolSchema.parse(payloadWithDefault);
         const { data: tx, error: txErr } = await supabase
           .from('transactions')
           .insert({
