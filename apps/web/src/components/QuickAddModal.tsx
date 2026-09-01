@@ -2,15 +2,14 @@
 
 import React, { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCentsToBRL, CategoryIcon } from '@equilibrium/ui';
-import { parseBRLToCents } from '@equilibrium/ui';
+import { formatCentsToBRL, CategoryIcon, parseNaturalInput } from '@equilibrium/ui';
 import { Account, Category, Profile } from '@/hooks/useHouseholdData';
 import { Command, Check, X, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => Promise<void>;
   accounts: Account[];
   categories: Category[];
   userProfile: Profile | null;
@@ -27,9 +26,9 @@ export function QuickAddModal({
   const [inputStr, setInputStr] = useState('');
   const [parsedDesc, setParsedDesc] = useState('');
   const [parsedCents, setParsedCents] = useState(0);
+  const [type, setType] = useState<'expense' | 'income'>('expense');
   const [selectedAccount, setSelectedAccount] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [type, setType] = useState<'expense' | 'income'>('expense');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,26 +43,10 @@ export function QuickAddModal({
     const val = e.target.value;
     setInputStr(val);
 
-    // Parser NLP local: extrai números e descrição
-    const match = val.match(/([a-zA-ZÀ-ÿ\s]+)?\s*([0-9]+(?:[.,][0-9]{1,2})?)/);
-    if (match) {
-      const desc = (match[1] || '').trim();
-      const numStr = match[2] || '';
-      const cents = parseBRLToCents(numStr);
-      setParsedDesc(desc || 'Transação');
-      setParsedCents(cents);
-
-      // Heurística de tipo (ex: "salário", "depósito", "recebido" -> income)
-      const lower = val.toLowerCase();
-      if (lower.includes('salário') || lower.includes('recebi') || lower.includes('depósito') || lower.includes('rendimento')) {
-        setType('income');
-      } else {
-        setType('expense');
-      }
-    } else {
-      setParsedDesc(val);
-      setParsedCents(0);
-    }
+    const parsed = parseNaturalInput(val);
+    setParsedDesc(parsed.description);
+    setParsedCents(parsed.amountCents);
+    setType(parsed.type);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
