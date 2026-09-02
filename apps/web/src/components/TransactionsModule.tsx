@@ -195,6 +195,17 @@ export function TransactionsModule({
             </button>
           </div>
 
+          {/* Export CSV Ghost Button */}
+          <a
+            href="/api/export"
+            download="equilibrium-transacoes.csv"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline text-ink rounded-[6px] font-medium text-xs transition-editorial shadow-sm cursor-pointer"
+            title="Exportar transações em formato CSV para Excel"
+          >
+            <Download className="w-3.5 h-3.5 text-ink-2" />
+            <span className="hidden sm:inline">Exportar CSV</span>
+          </a>
+
           {/* Import Button */}
           <button
             onClick={() => setIsImportModalOpen(true)}

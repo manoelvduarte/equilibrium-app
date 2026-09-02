@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useHouseholdDataMobile, MobileTransaction } from '../../src/hooks/useHouseholdDataMobile';
@@ -17,7 +18,10 @@ import {
   Undo2,
   Receipt,
   Camera,
+  Download,
 } from 'lucide-react-native';
+
+const WEB_API_URL = process.env.EXPO_PUBLIC_WEB_API_URL || 'http://localhost:3000';
 
 export default function MobileTransactionsScreen() {
   const router = useRouter();
@@ -25,6 +29,7 @@ export default function MobileTransactionsScreen() {
   const [filter, setFilter] = useState<'all' | 'expense' | 'income'>('all');
   const [deletedTx, setDeletedTx] = useState<MobileTransaction | null>(null);
   const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const filteredTransactions = transactions.filter((t) => {
     if (filter !== 'all' && t.type !== filter) return false;
@@ -69,6 +74,35 @@ export default function MobileTransactionsScreen() {
     }
   };
 
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`${WEB_API_URL}/api/export`, {
+        headers,
+      });
+
+      if (!res.ok) {
+        throw new Error('Falha ao baixar extrato CSV.');
+      }
+
+      const csvText = await res.text();
+      await Share.share({
+        title: 'equilibrium-transacoes.csv',
+        message: csvText,
+      });
+    } catch (err: any) {
+      Alert.alert('Exportar CSV', err.message || 'Erro ao exportar dados.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <View className="flex-1 bg-paper">
       
@@ -109,108 +143,108 @@ export default function MobileTransactionsScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={() => router.push('/adicionar')}
-          className="p-1.5 bg-brand rounded-[6px]"
-        >
-          <Plus size={16} color="#FAF8F4" strokeWidth={2.5} />
-        </TouchableOpacity>
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={handleExportCsv}
+            disabled={exporting}
+            className="p-1.5 bg-surface-2 border border-hairline rounded-[6px] mr-2"
+            title="Exportar CSV"
+          >
+            <Download size={16} color="#1C1B18" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/adicionar')}
+            className="p-1.5 bg-brand rounded-[6px]"
+          >
+            <Plus size={16} color="#FAF8F4" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Undo Toast Notification */}
       {deletedTx && (
-        <View className="m-4 p-3 bg-surface border border-hairline rounded-[8px] flex-row items-center justify-between shadow-md">
-          <Text className="font-sans text-xs text-ink flex-1" numberOfLines={1}>
-            "{deletedTx.description}" excluída.
+        <View className="m-4 p-3 bg-surface border border-hairline rounded-[8px] shadow-md flex-row items-center justify-between">
+          <Text className="font-sans text-xs text-ink flex-1 mr-2" numberOfLines={1}>
+            Transação "{deletedTx.description}" excluída.
           </Text>
           <TouchableOpacity
             onPress={handleUndo}
-            className="flex-row items-center space-x-1 px-2.5 py-1 bg-surface-2 rounded-[4px] ml-2"
+            className="px-2.5 py-1 bg-surface-2 rounded-[4px] flex-row items-center"
           >
-            <Undo2 size={12} color="#1E5C43" />
-            <Text className="font-sans-bold text-xs text-brand ml-1">Desfazer (5s)</Text>
+            <Undo2 size={12} color="#1C1B18" />
+            <Text className="font-sans text-xs font-bold text-brand ml-1">Desfazer</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* List */}
+      {/* Transactions List */}
       <FlatList
         data={filteredTransactions}
         keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor="#1E5C43" />}
-        contentContainerStyle={{ padding: 16, flexGrow: 1 }}
-        ListEmptyComponent={() => (
-          <View className="flex-1 items-center justify-center p-8 space-y-3 my-auto">
-            <Receipt size={32} color="#877F73" />
-            <Text className="font-display text-base font-medium text-ink">Nenhuma transação encontrada</Text>
-            <Text className="font-sans text-xs text-ink-3 text-center">
-              Comece adicionando uma despesa rápida ou escaneando uma nota.
-            </Text>
-            <View className="flex-row space-x-3 pt-2">
-              <TouchableOpacity
-                onPress={() => router.push('/escanear')}
-                className="px-3.5 py-2 bg-surface border border-hairline rounded-[6px] flex-row items-center space-x-1.5 shadow-sm"
-              >
-                <Camera size={14} color="#1E5C43" />
-                <Text className="font-sans-medium text-xs text-ink ml-1">Escanear Nota</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push('/adicionar')}
-                className="px-3.5 py-2 bg-brand rounded-[6px] flex-row items-center space-x-1.5 shadow-sm ml-2"
-              >
-                <Plus size={14} color="#FAF8F4" strokeWidth={2} />
-                <Text className="font-sans-bold text-xs text-paper ml-1">Adicionar Gasto</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        ItemSeparatorComponent={() => <View className="h-[1px] bg-hairline" />}
-        renderItem={({ item }) => (
-          <View className="py-3 px-1 flex-row items-center justify-between">
-            <View className="flex-1 mr-3">
-              <Text className="font-sans-medium text-sm text-ink" numberOfLines={1}>
-                {item.description}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} />}
+        contentContainerStyle={{ padding: 16 }}
+        ListEmptyComponent={
+          !loading ? (
+            <View className="p-8 items-center justify-center space-y-2">
+              <Receipt size={32} color="#85837D" strokeWidth={1.5} />
+              <Text className="font-display text-sm font-medium text-ink mt-2">
+                Nenhuma transação encontrada
               </Text>
-              <View className="flex-row items-center space-x-2 mt-0.5">
-                <Text className="font-mono text-[11px] text-ink-3">{item.date}</Text>
-                <Text className="text-[10px] text-ink-3">•</Text>
-                <Text className="font-sans text-[11px] text-ink-3">
-                  {item.category?.name || 'Geral'}
+              <Text className="font-sans text-xs text-ink-3 text-center">
+                Adicione movimentações pelo botão + ou tire uma foto de um comprovante.
+              </Text>
+            </View>
+          ) : null
+        }
+        renderItem={({ item }) => {
+          const isExpense = item.type === 'expense';
+          const amountSign = isExpense ? '-' : '+';
+          const formattedAmount = `${amountSign} ${formatCentsToBRL(item.amount_cents)}`;
+
+          return (
+            <View className="p-3.5 mb-2 bg-surface border border-hairline rounded-[10px] flex-row items-center justify-between shadow-xs">
+              <View className="flex-1 mr-3">
+                <Text className="font-sans font-medium text-sm text-ink" numberOfLines={1}>
+                  {item.description}
                 </Text>
-                <Text className="text-[10px] text-ink-3">•</Text>
-                <View className="px-1.5 py-0.2 bg-surface-2 border border-hairline rounded-[3px]">
-                  <Text className="font-mono text-[9px] uppercase text-ink-3">
-                    {item.source || 'manual'}
+                <View className="flex-row items-center space-x-2 mt-0.5">
+                  <Text className="font-mono text-[10px] text-ink-3 mr-2">
+                    {item.date}
                   </Text>
+                  {item.category && (
+                    <Text className="font-sans text-[10px] px-1.5 py-0.2 bg-surface-2 rounded-[4px] text-ink-2">
+                      {item.category.name}
+                    </Text>
+                  )}
+                  {item.source && item.source !== 'manual' && (
+                    <Text className="font-mono text-[9px] px-1 py-0.2 bg-brand/10 text-brand rounded-[4px] uppercase ml-1">
+                      {item.source}
+                    </Text>
+                  )}
                 </View>
               </View>
-            </View>
 
-            <View className="flex-row items-center space-x-3">
               <View className="items-end">
                 <Text
-                  className={`font-mono text-sm font-bold ${
-                    item.type === 'income' ? 'text-brand' : 'text-danger'
+                  className={`font-mono text-sm font-semibold ${
+                    isExpense ? 'text-ink' : 'text-brand'
                   }`}
                 >
-                  {item.type === 'income' ? '+' : '−'}
-                  {formatCentsToBRL(item.amount_cents)}
+                  {formattedAmount}
                 </Text>
-                <Text className="font-sans text-[10px] text-ink-3">
-                  {item.account?.name || 'Conta'}
-                </Text>
-              </View>
 
-              <TouchableOpacity
-                onPress={() => handleDelete(item)}
-                className="p-1.5 ml-2"
-                title="Excluir"
-              >
-                <Trash2 size={14} color="#877F73" />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDelete(item)}
+                  className="p-1 mt-1 text-ink-3 hover:text-danger"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Trash2 size={13} color="#85837D" />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
 
     </View>
