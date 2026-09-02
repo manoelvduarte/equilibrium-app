@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { formatCentsToBRL, formatRelativeDate, CategoryIcon } from '@equilibrium/ui';
 import { Account, Category, Profile, Transaction } from '@/hooks/useHouseholdData';
 import { AddAccountModal } from './accounts/AddAccountModal';
+import { CoupleHeroBanner } from './couple/CoupleHeroBanner';
 import {
   AreaChart,
   Area,
@@ -89,6 +90,13 @@ export function DashboardModule({
   return (
     <div className="space-y-6 sm:space-y-8">
       
+      {/* Hero Banner do Casal (Zero7Nove • 07.09) */}
+      <CoupleHeroBanner
+        netWorthCents={netWorthCents}
+        goalsCount={categories.length}
+        savingsRate={savingsRate}
+      />
+
       {/* 1. Faixa de KPIs: <sm = grid 2x2, >=md = 4 inline com hairline vertical */}
       <section className="grid grid-cols-2 md:grid-cols-4 border-y border-hairline bg-paper divide-y md:divide-y-0 md:divide-x divide-hairline">
         

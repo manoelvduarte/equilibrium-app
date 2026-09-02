@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { formatCentsToBRL } from '@equilibrium/ui';
-import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut, Bell } from 'lucide-react';
+import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut, Bell, Heart } from 'lucide-react';
 import { Profile, Category, Transaction, Budget, Goal, Debt } from '@/hooks/useHouseholdData';
 import { NotificationsModal } from './notifications/NotificationsModal';
 
@@ -63,26 +63,19 @@ export function Header({
     router.refresh();
   };
 
-  const getInitials = (name?: string) => {
-    if (!name) return 'EQ';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  };
-
   return (
     <header className="border-b border-hairline bg-paper/95 backdrop-blur-sm sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3.5">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4">
         
-        {/* Row 1 (<md) or Left Side (>=md): Brand, Household & User Controls */}
+        {/* Row 1 (<md) or Left Side (>=md): Brand Zero7Nove, Nossas Contas & User Controls */}
         <div className="flex items-center justify-between gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm sm:text-base shadow-sm">
-              <Scale className="w-4 h-4 text-brand stroke-[2]" />
-              <span className="font-display tracking-tight">Equilibrium</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm sm:text-base shadow-xs">
+              <Heart className="w-4 h-4 text-brand fill-brand/20 stroke-brand stroke-[2]" />
+              <div className="flex items-baseline gap-1">
+                <span className="font-display tracking-tight text-ink font-semibold">Zero7Nove</span>
+                <span className="font-mono text-[9px] text-ink-3 font-normal">07•09</span>
+              </div>
             </div>
 
             {/* Tag Nossas Contas */}
@@ -121,11 +114,16 @@ export function Header({
               {isDarkMode ? <Sun className="w-3.5 h-3.5 text-warning stroke-[1.5]" /> : <Moon className="w-3.5 h-3.5 stroke-[1.5]" />}
             </button>
 
+            {/* Foto do Casal no Mobile */}
             <div
-              className="w-6 h-6 rounded-full bg-surface-2 border border-hairline flex items-center justify-center font-semibold text-[10px] text-ink ml-1"
-              title={userProfile?.full_name || 'Usuário'}
+              className="w-6 h-6 rounded-full overflow-hidden border border-brand/40 shadow-xs flex items-center justify-center bg-surface-2 ml-1"
+              title={userProfile?.full_name || 'Manoel & Amor'}
             >
-              {getInitials(userProfile?.full_name)}
+              <img
+                src="/couple/couple-home.jpg"
+                alt="Casal"
+                className="w-full h-full object-cover"
+              />
             </div>
 
             <button
@@ -172,7 +170,7 @@ export function Header({
               <span className="hidden sm:inline">Transação</span>
             </button>
 
-            {/* Desktop-only Notification, Invite, Theme & Avatar Controls */}
+            {/* Desktop-only Notification, Invite, Theme & Couple Avatar */}
             <div className="hidden md:flex items-center gap-2 pl-2 border-l border-hairline">
               <button
                 onClick={() => setIsNotificationsOpen(true)}
@@ -202,11 +200,16 @@ export function Header({
                 {isDarkMode ? <Sun className="w-4 h-4 text-warning stroke-[1.5]" /> : <Moon className="w-4 h-4 stroke-[1.5]" />}
               </button>
 
+              {/* Foto do Casal no Desktop */}
               <div
-                className="w-7 h-7 rounded-full bg-surface-2 border border-hairline flex items-center justify-center font-semibold text-[11px] text-ink"
-                title={userProfile?.full_name || 'Usuário'}
+                className="w-7 h-7 rounded-full overflow-hidden border border-brand/40 shadow-xs flex items-center justify-center bg-surface-2"
+                title={userProfile?.full_name || 'Manoel & Amor'}
               >
-                {getInitials(userProfile?.full_name)}
+                <img
+                  src="/couple/couple-home.jpg"
+                  alt="Casal"
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               <button

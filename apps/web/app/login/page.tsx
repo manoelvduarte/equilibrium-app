@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Scale, ArrowRight, Mail, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Heart, ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,15 +54,16 @@ export default function LoginPage() {
         
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm shadow-sm">
-            <Scale className="w-4 h-4 text-brand" />
-            <span>Equilibrium</span>
+          <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm shadow-xs">
+            <Heart className="w-4 h-4 text-brand fill-brand/20 stroke-brand" />
+            <span className="font-display font-semibold tracking-tight">Zero7Nove</span>
+            <span className="font-mono text-[10px] text-ink-3">07•09</span>
           </div>
-          <h1 className="font-display text-3xl font-medium tracking-tight text-ink">
-            Acessar conta
+          <h1 className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink">
+            Acessar o nosso espaço
           </h1>
           <p className="text-xs text-ink-2">
-            Gestão financeira compartilhada com privacidade e inteligência.
+            Gestão financeira e patrimonial do casal com inteligência e transparência.
           </p>
         </div>
 
@@ -86,13 +87,13 @@ export default function LoginPage() {
             </p>
             <button
               onClick={() => setMagicLinkSent(false)}
-              className="text-xs text-brand font-medium hover:underline pt-2 block mx-auto"
+              className="text-xs text-brand font-medium hover:underline pt-2 block mx-auto cursor-pointer"
             >
               Tentar com senha
             </button>
           </div>
         ) : (
-          <form onSubmit={handleLogin} className="bg-surface border border-hairline rounded-[12px] p-6 shadow-sm space-y-4">
+          <form onSubmit={handleLogin} className="bg-surface border border-hairline rounded-[12px] p-6 shadow-xs space-y-4">
             
             {/* Email Field */}
             <div className="space-y-1">
@@ -109,7 +110,7 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* Password Field (when not magic link) */}
+            {/* Password Field */}
             {!isMagicLink && (
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
@@ -133,7 +134,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsMagicLink(!isMagicLink)}
-                className="text-ink-2 hover:text-ink transition-editorial text-[11px] underline underline-offset-2"
+                className="text-ink-2 hover:text-ink transition-editorial text-[11px] underline underline-offset-2 cursor-pointer"
               >
                 {isMagicLink ? 'Entrar com senha' : 'Usar Magic Link por e-mail'}
               </button>
