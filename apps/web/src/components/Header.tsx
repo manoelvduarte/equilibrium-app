@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { formatCentsToBRL } from '@equilibrium/ui';
-import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut, Bell, Heart } from 'lucide-react';
+import { formatCentsToCurrency } from '@equilibrium/ui';
+import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut, Bell, Heart, Coins } from 'lucide-react';
 import { Profile, Category, Transaction, Budget, Goal, Debt } from '@/hooks/useHouseholdData';
 import { NotificationsModal } from './notifications/NotificationsModal';
 
@@ -37,12 +37,26 @@ export function Header({
 }: HeaderProps) {
   const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currency, setCurrency] = useState<'EUR' | 'BRL'>('EUR');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
+    // Light mode padrão primário
+    const savedTheme = localStorage.getItem('equilibrium-theme');
+    const isDark = savedTheme === 'dark';
     setIsDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    // Moeda padrão EUR
+    const savedCurr = localStorage.getItem('zero7nove-currency') as 'EUR' | 'BRL';
+    if (savedCurr === 'BRL' || savedCurr === 'EUR') {
+      setCurrency(savedCurr);
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -57,6 +71,13 @@ export function Header({
     }
   };
 
+  const handleCurrencyChange = (curr: 'EUR' | 'BRL') => {
+    setCurrency(curr);
+    localStorage.setItem('zero7nove-currency', curr);
+    // Dispara evento customizado para atualizar formatadores da página se necessário
+    window.dispatchEvent(new CustomEvent('currency-change', { detail: curr }));
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
@@ -67,7 +88,7 @@ export function Header({
     <header className="border-b border-hairline bg-paper/95 backdrop-blur-sm sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3.5">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4">
         
-        {/* Row 1 (<md) or Left Side (>=md): Brand Zero7Nove, Nossas Contas & User Controls */}
+        {/* Row 1 (<md) or Left Side (>=md): Brand Zero7Nove, Nossas Contas & Controls */}
         <div className="flex items-center justify-between gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm sm:text-base shadow-xs">
@@ -87,6 +108,26 @@ export function Header({
 
           {/* User Controls on Mobile (Right of Row 1) */}
           <div className="flex md:hidden items-center gap-1.5">
+            {/* Currency Selector Mobile */}
+            <div className="flex items-center p-0.5 bg-surface-2 border border-hairline rounded-[6px] text-[10px] font-mono">
+              <button
+                onClick={() => handleCurrencyChange('EUR')}
+                className={`px-1.5 py-0.5 rounded-[4px] font-semibold transition-editorial cursor-pointer ${
+                  currency === 'EUR' ? 'bg-surface text-ink shadow-2xs font-bold' : 'text-ink-3 hover:text-ink'
+                }`}
+              >
+                €
+              </button>
+              <button
+                onClick={() => handleCurrencyChange('BRL')}
+                className={`px-1.5 py-0.5 rounded-[4px] font-semibold transition-editorial cursor-pointer ${
+                  currency === 'BRL' ? 'bg-surface text-ink shadow-2xs font-bold' : 'text-ink-3 hover:text-ink'
+                }`}
+              >
+                R$
+              </button>
+            </div>
+
             <button
               onClick={() => setIsNotificationsOpen(true)}
               className="p-1.5 text-ink-2 hover:text-ink bg-surface border border-hairline rounded-[4px] relative"
@@ -137,18 +178,41 @@ export function Header({
           </div>
         </div>
 
-        {/* Row 2 (<md) or Right Side (>=md): Net worth, Quick Add & Transactions */}
+        {/* Row 2 (<md) or Right Side (>=md): Net worth, Quick Add, Currency & Transactions */}
         <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto pt-1 md:pt-0 border-t md:border-t-0 border-hairline/60">
           
           {/* Net Worth Summary Badge */}
           <div className="flex items-center md:flex-col md:items-end gap-1.5 md:gap-0 px-2.5 py-1 bg-surface border border-hairline rounded-[6px]">
             <span className="micro-label text-[9px] sm:text-[10px]">Patrimônio:</span>
             <span className="text-xs font-semibold font-mono text-ink tnum">
-              {formatCentsToBRL(netWorthCents)}
+              {formatCentsToCurrency(netWorthCents, currency)}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            
+            {/* Desktop Currency Selector (€ EUR / R$ BRL) */}
+            <div className="hidden sm:flex items-center p-0.5 bg-surface-2 border border-hairline rounded-[6px] text-[10px] font-mono">
+              <button
+                onClick={() => handleCurrencyChange('EUR')}
+                className={`px-2 py-1 rounded-[4px] font-semibold transition-editorial cursor-pointer ${
+                  currency === 'EUR' ? 'bg-surface text-ink shadow-2xs font-bold' : 'text-ink-3 hover:text-ink'
+                }`}
+                title="Visualizar em Euros (€)"
+              >
+                € EUR
+              </button>
+              <button
+                onClick={() => handleCurrencyChange('BRL')}
+                className={`px-2 py-1 rounded-[4px] font-semibold transition-editorial cursor-pointer ${
+                  currency === 'BRL' ? 'bg-surface text-ink shadow-2xs font-bold' : 'text-ink-3 hover:text-ink'
+                }`}
+                title="Visualizar em Reais (R$)"
+              >
+                R$ BRL
+              </button>
+            </div>
+
             {/* Quick-Add Button (⌘K) */}
             <button
               onClick={onOpenQuickAdd}

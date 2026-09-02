@@ -44,8 +44,7 @@ export default function RootLayout({
             __html: `
               try {
                 const storedTheme = localStorage.getItem('equilibrium-theme');
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
+                if (storedTheme === 'dark') {
                   document.documentElement.classList.add('dark');
                 } else {
                   document.documentElement.classList.remove('dark');

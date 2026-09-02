@@ -1,28 +1,44 @@
 /**
- * Converte um valor inteiro de centavos (`amount_cents`) em string formatada em BRL (R$).
+ * Converte um valor inteiro de centavos (`amount_cents`) em string formatada em EUR (€) por padrão ou BRL (R$).
  * Usa sinal de menos verdadeiro (`−`) para valores negativos.
- * Exemplo: 1250 -> "R$ 12,50", -1250 -> "−R$ 12,50"
  */
-export function formatCentsToBRL(amountCents: number, options?: { showSign?: boolean }): string {
+export function formatCentsToCurrency(
+  amountCents: number,
+  currency: 'EUR' | 'BRL' = 'EUR',
+  options?: { showSign?: boolean }
+): string {
   const isNegative = amountCents < 0;
-  const absReais = Math.abs(amountCents) / 100;
-  
-  const formatted = new Intl.NumberFormat('pt-BR', {
+  const absValue = Math.abs(amountCents) / 100;
+
+  const locale = currency === 'EUR' ? 'pt-PT' : 'pt-BR';
+
+  const formatted = new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'BRL',
+    currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(absReais);
+  }).format(absValue);
 
   if (isNegative) {
     return `−${formatted}`;
   }
-  
+
   if (options?.showSign && amountCents > 0) {
     return `+${formatted}`;
   }
 
   return formatted;
+}
+
+/**
+ * Função de formatação principal (padrão em EUR com suporte dinâmico a BRL).
+ */
+export function formatCentsToBRL(
+  amountCents: number,
+  options?: { showSign?: boolean; currency?: 'EUR' | 'BRL' }
+): string {
+  const curr = options?.currency || 'EUR';
+  return formatCentsToCurrency(amountCents, curr, options);
 }
 
 /**
