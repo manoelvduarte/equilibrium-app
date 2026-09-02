@@ -5,14 +5,9 @@ export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 export async function GET(req: Request) {
-  // 1. Guard de Autenticação Híbrida (Cookie Web ou Bearer Mobile)
-  const authContext = await getUserFromRequest(req);
-  if (!authContext) {
-    return Response.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-
   const apiKey = process.env.OPENROUTER_API_KEY;
   const envOk = Boolean(apiKey && apiKey.trim().length > 0);
+  const configuredModel = process.env.AI_MODEL || MODEL_PRIMARY;
 
   if (!envOk) {
     return Response.json(
@@ -20,18 +15,20 @@ export async function GET(req: Request) {
         envOk: false,
         provider: 'openrouter',
         pingOk: false,
-        model: process.env.AI_MODEL || MODEL_PRIMARY,
-        providerError: 'OPENROUTER_API_KEY não encontrada em apps/web/.env.local',
+        model: configuredModel,
+        providerError: 'OPENROUTER_API_KEY não configurada em apps/web/.env.local',
       },
       { status: 500 }
     );
   }
 
-  const configuredModel = process.env.AI_MODEL || MODEL_PRIMARY;
-  console.log(`[AI Health] OpenRouter ready: configuredModel=${configuredModel} key=presente`);
+  // Identificação do usuário (opcional para teste de saúde)
+  const authContext = await getUserFromRequest(req).catch(() => null);
+
+  console.log(`[AI Health] OpenRouter ready: configuredModel=${configuredModel} key=presente auth=${Boolean(authContext)}`);
 
   try {
-    // 2. Teste de geração mínima com cascata de fallback
+    // Teste de geração mínima com cascata de fallback
     const result = await generateTextWithFallback({
       prompt: 'ping',
       maxTokens: 5,
@@ -42,6 +39,7 @@ export async function GET(req: Request) {
       provider: 'openrouter',
       pingOk: true,
       model: result.usedModel,
+      authenticated: Boolean(authContext),
       response: result.text.trim(),
       providerError: null,
     });
@@ -55,6 +53,7 @@ export async function GET(req: Request) {
         provider: 'openrouter',
         pingOk: false,
         model: configuredModel,
+        authenticated: Boolean(authContext),
         providerError: errMsg,
       },
       { status: 502 }
