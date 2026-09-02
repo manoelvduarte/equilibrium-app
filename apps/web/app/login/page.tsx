@@ -51,18 +51,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-paper flex flex-col md:flex-row">
       
-      {/* Left Column: Visual Editorial do Casal (Desktop) */}
+      {/* Left Column: Visual Editorial do Casal com Foto da Neve */}
       <div className="relative hidden md:flex md:w-1/2 lg:w-7/12 min-h-screen bg-ink overflow-hidden items-end p-8 lg:p-12">
         
-        {/* Foto de Fundo com Tratamento Editorial */}
+        {/* Foto de Fundo na Neve */}
         <img
-          src="/couple/couple-notredame.jpg"
-          alt="Momentos do Casal"
-          className="absolute inset-0 w-full h-full object-cover opacity-85 scale-105 transition-transform duration-1000"
+          src="/couple/couple-snow.jpg"
+          alt="Manoel e Giovana"
+          className="absolute inset-0 w-full h-full object-cover opacity-90 scale-105 transition-transform duration-1000"
         />
 
         {/* Gradiente de iluminação cinematográfica */}
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/30 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-ink/40" />
 
         {/* Card Editorial Flutuante */}
@@ -74,7 +74,7 @@ export default function LoginPage() {
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] text-ink-2 font-mono">
               <Compass className="w-3 h-3 text-gold" />
-              <span>Paris & Viagens</span>
+              <span>Nossas Conquistas & Viagens</span>
             </span>
           </div>
 
@@ -83,7 +83,7 @@ export default function LoginPage() {
           </h2>
 
           <div className="pt-2 border-t border-hairline/60 flex items-center justify-between text-[11px] text-ink-3 font-mono">
-            <span>Manoel & Parceira</span>
+            <span className="font-bold text-ink-2">Manoel & Giovana</span>
             <span>Desde 07/09</span>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function LoginPage() {
               Nosso Espaço Financeiro
             </h1>
             <p className="text-xs text-ink-2 leading-relaxed">
-              Gestão de contas, orçamentos, euros (€) e metas do casal com total harmonia e privacidade.
+              Gestão de contas, orçamentos, euros (€) e metas de <strong>Manoel & Giovana</strong>.
             </p>
           </div>
 

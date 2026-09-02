@@ -58,10 +58,10 @@ export function CoupleHeroBanner({
 
           <div className="space-y-1.5">
             <h1 className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink leading-tight">
-              Construindo a nossa história e o nosso futuro.
+              Manoel & Giovana
             </h1>
             <p className="text-xs sm:text-sm text-ink-2 max-w-xl leading-relaxed">
-              Gestão financeira compartilhada, transparente e focada na realização das nossas próximas viagens, sonhos e conquistas a dois.
+              Construindo juntos o nosso patrimônio, metas financeiras e as próximas viagens desde 07/09.
             </p>
           </div>
 
