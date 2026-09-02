@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { formatCentsToBRL } from '@equilibrium/ui';
-import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut } from 'lucide-react';
-import { Profile } from '@/hooks/useHouseholdData';
+import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut, Bell } from 'lucide-react';
+import { Profile, Category, Transaction, Budget, Goal, Debt } from '@/hooks/useHouseholdData';
+import { NotificationsModal } from './notifications/NotificationsModal';
 
 interface HeaderProps {
   onOpenQuickAdd: () => void;
@@ -14,6 +15,11 @@ interface HeaderProps {
   netWorthCents: number;
   householdName: string;
   userProfile: Profile | null;
+  categories?: Category[];
+  transactions?: Transaction[];
+  budgets?: Budget[];
+  goals?: Goal[];
+  debts?: Debt[];
 }
 
 export function Header({
@@ -23,9 +29,15 @@ export function Header({
   netWorthCents,
   householdName,
   userProfile,
+  categories = [],
+  transactions = [],
+  budgets = [],
+  goals = [],
+  debts = [],
 }: HeaderProps) {
   const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -73,14 +85,25 @@ export function Header({
               <span className="font-display tracking-tight">Equilibrium</span>
             </div>
 
-            <div className="flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-surface-2 border border-hairline rounded-[4px] text-[11px] sm:text-xs text-ink-2 max-w-[130px] sm:max-w-none truncate">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>
-              <span className="font-medium text-ink truncate">{householdName}</span>
+            {/* Tag Nossas Contas */}
+            <div className="flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-surface-2 border border-hairline rounded-[4px] text-[11px] sm:text-xs text-ink-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0 animate-pulse"></span>
+              <span className="font-medium text-ink">Nossas Contas</span>
             </div>
           </div>
 
           {/* User Controls on Mobile (Right of Row 1) */}
           <div className="flex md:hidden items-center gap-1.5">
+            <button
+              onClick={() => setIsNotificationsOpen(true)}
+              className="p-1.5 text-ink-2 hover:text-ink bg-surface border border-hairline rounded-[4px] relative"
+              title="Notificações e Alertas"
+              aria-label="Notificações e Alertas"
+            >
+              <Bell className="w-3.5 h-3.5 stroke-[1.5]" />
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-brand rounded-full" />
+            </button>
+
             <button
               onClick={onOpenInvite}
               className="p-1 text-ink-2 hover:text-ink bg-surface border border-hairline rounded-[4px]"
@@ -149,8 +172,18 @@ export function Header({
               <span className="hidden sm:inline">Transação</span>
             </button>
 
-            {/* Desktop-only Invite, Theme & Avatar Controls */}
+            {/* Desktop-only Notification, Invite, Theme & Avatar Controls */}
             <div className="hidden md:flex items-center gap-2 pl-2 border-l border-hairline">
+              <button
+                onClick={() => setIsNotificationsOpen(true)}
+                className="p-1.5 text-ink-2 hover:text-ink bg-surface hover:bg-surface-2 border border-hairline rounded-[6px] transition-editorial cursor-pointer relative"
+                title="Central de Notificações & Alertas"
+                aria-label="Notificações"
+              >
+                <Bell className="w-4 h-4 stroke-[1.5]" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-brand rounded-full animate-pulse" />
+              </button>
+
               <button
                 onClick={onOpenInvite}
                 className="p-1.5 text-ink-2 hover:text-ink bg-surface hover:bg-surface-2 border border-hairline rounded-[6px] transition-editorial cursor-pointer"
@@ -190,6 +223,17 @@ export function Header({
         </div>
 
       </div>
+
+      {/* Modal de Notificações */}
+      <NotificationsModal
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        categories={categories}
+        transactions={transactions}
+        budgets={budgets}
+        goals={goals}
+        debts={debts}
+      />
     </header>
   );
 }

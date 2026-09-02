@@ -7,13 +7,14 @@ import { DashboardModule } from '@/components/DashboardModule';
 import { TransactionsModule } from '@/components/TransactionsModule';
 import { BudgetModule } from '@/components/BudgetModule';
 import { GoalsDebtsModule } from '@/components/GoalsDebtsModule';
+import { NotesRemindersModule } from '@/components/NotesRemindersModule';
 import { QuickAddModal } from '@/components/QuickAddModal';
 import { InvitePartnerModal } from '@/components/InvitePartnerModal';
 import { AssistantDrawer } from '@/components/assistant/AssistantDrawer';
-import { LayoutDashboard, Receipt, PieChart, Target } from 'lucide-react';
+import { LayoutDashboard, Receipt, PieChart, Target, StickyNote } from 'lucide-react';
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budget' | 'goals'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budget' | 'goals' | 'notes'>('dashboard');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isNewTxOpen, setIsNewTxOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -48,7 +49,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-paper text-ink flex flex-col">
       
-      {/* Header com dados reais e avatar */}
+      {/* Header com dados reais, Notificações e badge Nossas Contas */}
       <Header
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenNewTransaction={() => {
@@ -59,12 +60,17 @@ export default function HomePage() {
         netWorthCents={netWorthCents}
         householdName={householdName}
         userProfile={userProfile}
+        categories={categories}
+        transactions={transactions}
+        budgets={budgets}
+        goals={goals}
+        debts={debts}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-6">
         
-        {/* Navigation Tabs (Sem códigos M2/M3) */}
+        {/* Navigation Tabs */}
         <nav className="flex items-center gap-1 border-b border-hairline pb-2 overflow-x-auto text-xs no-scrollbar">
           <button
             onClick={() => setActiveTab('dashboard')}
@@ -117,6 +123,18 @@ export default function HomePage() {
           >
             <Target className="w-3.5 h-3.5 stroke-[1.5]" />
             <span>Metas & Dívidas</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('notes')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+              activeTab === 'notes'
+                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                : 'text-ink-2 hover:text-ink hover:bg-surface-2'
+            }`}
+          >
+            <StickyNote className="w-3.5 h-3.5 stroke-[1.5]" />
+            <span>Notas & Lembretes</span>
           </button>
         </nav>
 
@@ -179,6 +197,13 @@ export default function HomePage() {
                 goals={goals}
                 debts={debts}
                 onRefresh={refetch}
+              />
+            )}
+
+            {activeTab === 'notes' && (
+              <NotesRemindersModule
+                userProfile={userProfile}
+                partners={partners}
               />
             )}
           </>
