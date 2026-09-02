@@ -15,6 +15,7 @@ import {
   X,
   AlertCircle,
   FileSpreadsheet,
+  Download,
 } from 'lucide-react';
 
 interface TransactionsModuleProps {
