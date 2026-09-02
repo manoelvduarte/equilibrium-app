@@ -145,6 +145,7 @@ export default function HomePage() {
                   setActiveTab('transactions');
                   setIsNewTxOpen(true);
                 }}
+                onRefresh={refetch}
               />
             )}
 
@@ -169,6 +170,7 @@ export default function HomePage() {
                   setActiveTab('transactions');
                   setIsNewTxOpen(true);
                 }}
+                onRefresh={refetch}
               />
             )}
 
@@ -176,6 +178,7 @@ export default function HomePage() {
               <GoalsDebtsModule
                 goals={goals}
                 debts={debts}
+                onRefresh={refetch}
               />
             )}
           </>

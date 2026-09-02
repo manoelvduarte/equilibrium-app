@@ -6,10 +6,10 @@ import { createClient } from '@/lib/supabase/client';
 export interface Account {
   id: string;
   name: string;
-  type: string;
-  visibility: 'private' | 'balance_only' | 'shared';
-  owner_id: string | null;
+  type: 'checking' | 'savings' | 'credit_card' | 'investment' | 'cash' | 'other';
   balance_cents: number;
+  visibility: 'private' | 'balance_only' | 'shared';
+  owner_id: string;
 }
 
 export interface Category {
@@ -17,15 +17,9 @@ export interface Category {
   name: string;
   icon: string;
   color: string;
-  kind: 'expense' | 'income';
+  kind: 'income' | 'expense';
   budget_style: 'fixed' | 'flex' | 'envelope';
-}
-
-export interface Profile {
-  id: string;
-  full_name: string;
-  email: string | null;
-  household_id: string;
+  sort_order: number;
 }
 
 export interface Transaction {
@@ -33,24 +27,33 @@ export interface Transaction {
   description: string;
   amount_cents: number;
   type: 'income' | 'expense' | 'transfer';
-  occurred_at: string;
   date: string;
+  occurred_at: string;
   account_id: string;
   category_id: string | null;
-  created_by_id: string | null;
+  created_by_id: string;
   deleted_at: string | null;
-  source?: 'manual' | 'csv' | 'ofx' | 'qif' | 'pluggy' | 'ai' | 'ocr';
-  account?: { name: string };
-  category?: { name: string; icon: string; color: string };
-  creator?: { full_name: string };
+  source: string;
+  account?: {
+    name: string;
+  };
+  category?: {
+    name: string;
+    icon: string;
+    color: string;
+  };
+  creator?: {
+    full_name: string;
+  };
 }
 
 export interface Budget {
   id: string;
   category_id: string;
+  limit_cents: number;
+  envelope_cents: number;
   month: number;
   year: number;
-  limit_cents: number;
   category?: Category;
 }
 
@@ -59,8 +62,8 @@ export interface Goal {
   name: string;
   target_cents: number;
   current_cents: number;
-  deadline: string | null;
-  strategy: string | null;
+  deadline?: string | null;
+  strategy?: string | null;
 }
 
 export interface Debt {
@@ -69,10 +72,20 @@ export interface Debt {
   principal_cents: number;
   interest_rate_permille: number;
   minimum_payment_cents: number;
-  strategy: string | null;
+  strategy: 'snowball' | 'avalanche';
+}
+
+export interface Profile {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
+  role: string;
+  household_id: string;
 }
 
 export interface HouseholdSummary {
+  loading: boolean;
   householdName: string;
   userProfile: Profile | null;
   partners: Profile[];
@@ -83,13 +96,12 @@ export interface HouseholdSummary {
   goals: Goal[];
   debts: Debt[];
   netWorthCents: number;
-  loading: boolean;
   refetch: () => Promise<void>;
 }
 
 export function useHouseholdData(): HouseholdSummary {
   const [loading, setLoading] = useState(true);
-  const [householdName, setHouseholdName] = useState('Nosso Casa');
+  const [householdName, setHouseholdName] = useState('Nossa Casa');
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [partners, setPartners] = useState<Profile[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -126,7 +138,9 @@ export function useHouseholdData(): HouseholdSummary {
           .single();
 
         if (householdData) {
-          setHouseholdName(householdData.name);
+          const rawName = householdData.name;
+          const cleanName = rawName === 'Nosso Casa' ? 'Nossa Casa' : (rawName || 'Nossa Casa');
+          setHouseholdName(cleanName);
         }
 
         const { data: partnersData } = await supabase
@@ -139,24 +153,40 @@ export function useHouseholdData(): HouseholdSummary {
         }
       }
 
-      // 3. Contas e Saldos da view account_balances
+      // 3. Contas e Saldos
       const { data: accData } = await supabase
         .from('accounts')
         .select('id, name, type, visibility, owner_id');
 
-      const { data: balancesData } = await supabase
-        .from('account_balances')
-        .select('account_id, balance_cents');
+      if (accData && accData.length > 0) {
+        const { data: balancesData } = await supabase
+          .from('account_balances')
+          .select('account_id, balance_cents');
 
-      const balancesMap = new Map<string, number>();
-      balancesData?.forEach((b: any) => balancesMap.set(b.account_id, Number(b.balance_cents)));
+        const balancesMap = new Map<string, number>();
+        balancesData?.forEach((b: any) => balancesMap.set(b.account_id, Number(b.balance_cents)));
 
-      if (accData) {
         const enrichedAccounts: Account[] = accData.map((a: any) => ({
           ...a,
           balance_cents: balancesMap.get(a.id) || 0,
         }));
         setAccounts(enrichedAccounts);
+      } else if (profileData?.household_id) {
+        // Auto-seed de Contas Iniciais
+        const defaultAccounts = [
+          { name: 'Conta Corrente Principal', type: 'checking', visibility: 'shared', currency: 'BRL', household_id: profileData.household_id, owner_id: profileData.id },
+          { name: 'Cartão de Crédito Conjunto', type: 'credit_card', visibility: 'shared', currency: 'BRL', household_id: profileData.household_id, owner_id: profileData.id },
+          { name: 'Reserva de Emergência', type: 'investment', visibility: 'shared', currency: 'BRL', household_id: profileData.household_id, owner_id: profileData.id },
+        ];
+
+        const { data: insertedAccs } = await supabase
+          .from('accounts')
+          .insert(defaultAccounts)
+          .select();
+
+        if (insertedAccs) {
+          setAccounts(insertedAccs.map((a: any) => ({ ...a, balance_cents: 0 })));
+        }
       }
 
       // 4. Categorias
@@ -168,18 +198,18 @@ export function useHouseholdData(): HouseholdSummary {
       if (catData && catData.length > 0) {
         setCategories(catData);
       } else if (profileData?.household_id) {
-        // Se ainda não houver categorias no banco, insere o catálogo base
+        // Auto-seed de Categorias Base
         const defaultCategories = [
-          { name: 'Moradia', icon: 'home', color: '#5F7461', kind: 'expense', budget_style: 'fixed' as const, sort_order: 1 },
-          { name: 'Mercado', icon: 'shopping-cart', color: '#A96A3C', kind: 'expense', budget_style: 'envelope' as const, sort_order: 2 },
-          { name: 'Restaurantes', icon: 'utensils', color: '#B4532A', kind: 'expense', budget_style: 'flex' as const, sort_order: 3 },
-          { name: 'Transporte', icon: 'car', color: '#23606B', kind: 'expense', budget_style: 'flex' as const, sort_order: 4 },
-          { name: 'Lazer', icon: 'plane', color: '#7D5E7C', kind: 'expense', budget_style: 'flex' as const, sort_order: 5 },
-          { name: 'Tecnologia', icon: 'laptop', color: '#4E7E8C', kind: 'expense', budget_style: 'fixed' as const, sort_order: 6 },
-          { name: 'Utilidades', icon: 'zap', color: '#A3874A', kind: 'expense', budget_style: 'fixed' as const, sort_order: 7 },
-          { name: 'Saúde', icon: 'heart-pulse', color: '#6E8F6B', kind: 'expense', budget_style: 'flex' as const, sort_order: 8 },
-          { name: 'Salário', icon: 'banknote', color: '#9C5A54', kind: 'income', budget_style: 'fixed' as const, sort_order: 9 },
-          { name: 'Outros', icon: 'tag', color: '#5C6B7A', kind: 'expense', budget_style: 'flex' as const, sort_order: 10 },
+          { name: 'Moradia & Aluguel', icon: 'home', color: '#5F7461', kind: 'expense', budget_style: 'fixed' as const, sort_order: 1 },
+          { name: 'Alimentação & Mercado', icon: 'shopping-cart', color: '#A96A3C', kind: 'expense', budget_style: 'envelope' as const, sort_order: 2 },
+          { name: 'Restaurantes & Delivery', icon: 'utensils', color: '#B4532A', kind: 'expense', budget_style: 'flex' as const, sort_order: 3 },
+          { name: 'Transporte & Combustível', icon: 'car', color: '#23606B', kind: 'expense', budget_style: 'flex' as const, sort_order: 4 },
+          { name: 'Lazer & Cultura', icon: 'plane', color: '#7D5E7C', kind: 'expense', budget_style: 'flex' as const, sort_order: 5 },
+          { name: 'Tecnologia & Assinaturas', icon: 'laptop', color: '#4E7E8C', kind: 'expense', budget_style: 'fixed' as const, sort_order: 6 },
+          { name: 'Contas & Utilidades', icon: 'zap', color: '#A3874A', kind: 'expense', budget_style: 'fixed' as const, sort_order: 7 },
+          { name: 'Saúde & Farmácia', icon: 'heart-pulse', color: '#6E8F6B', kind: 'expense', budget_style: 'flex' as const, sort_order: 8 },
+          { name: 'Salário & Renda Principal', icon: 'banknote', color: '#9C5A54', kind: 'income', budget_style: 'fixed' as const, sort_order: 9 },
+          { name: 'Rendimentos & Investimentos', icon: 'tag', color: '#5C6B7A', kind: 'income', budget_style: 'flex' as const, sort_order: 10 },
         ];
 
         await supabase.from('categories').insert(
@@ -250,11 +280,20 @@ export function useHouseholdData(): HouseholdSummary {
       // 7. Metas (Goals)
       const { data: goalData } = await supabase.from('goals').select('*');
       if (goalData) {
-        setGoals(goalData.map((g: any) => ({
-          ...g,
-          target_cents: Number(g.target_cents),
-          current_cents: Number(g.target_cents * 0.4), // Projeção calculada
-        })));
+        setGoals(goalData.map((g: any) => {
+          let currentCents = 0;
+          try {
+            const meta = JSON.parse(g.strategy || '{}');
+            currentCents = Number(meta.current_cents || 0);
+          } catch {
+            currentCents = 0;
+          }
+          return {
+            ...g,
+            target_cents: Number(g.target_cents),
+            current_cents: currentCents,
+          };
+        }));
       }
 
       // 8. Dívidas (Debts)
@@ -265,6 +304,7 @@ export function useHouseholdData(): HouseholdSummary {
           principal_cents: Number(d.principal_cents),
           interest_rate_permille: Number(d.apr_bps) / 10 || 15,
           minimum_payment_cents: Number(d.min_payment_cents),
+          strategy: d.strategy || 'avalanche',
         })));
       }
 
@@ -279,16 +319,29 @@ export function useHouseholdData(): HouseholdSummary {
     fetchData();
   }, [fetchData]);
 
-  // Realtime subscription na tabela transactions
+  // Realtime subscription
   useEffect(() => {
     const channel = supabase
-      .channel('realtime_transactions')
+      .channel('realtime_all_finances')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'transactions' },
-        () => {
-          fetchData();
-        }
+        () => fetchData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'goals' },
+        () => fetchData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'debts' },
+        () => fetchData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'accounts' },
+        () => fetchData()
       )
       .subscribe();
 
@@ -300,6 +353,7 @@ export function useHouseholdData(): HouseholdSummary {
   const netWorthCents = accounts.reduce((acc, curr) => acc + (curr.balance_cents || 0), 0);
 
   return {
+    loading,
     householdName,
     userProfile,
     partners,
@@ -310,7 +364,6 @@ export function useHouseholdData(): HouseholdSummary {
     goals,
     debts,
     netWorthCents,
-    loading,
     refetch: fetchData,
   };
 }

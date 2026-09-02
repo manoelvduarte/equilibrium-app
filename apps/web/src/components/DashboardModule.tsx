@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { formatCentsToBRL, formatRelativeDate, CategoryIcon } from '@equilibrium/ui';
 import { Account, Category, Profile, Transaction } from '@/hooks/useHouseholdData';
+import { AddAccountModal } from './accounts/AddAccountModal';
 import {
   AreaChart,
   Area,
@@ -20,6 +21,7 @@ import {
   Plus,
   ArrowUpRight,
   ArrowDownRight,
+  Landmark,
   FileText,
 } from 'lucide-react';
 
@@ -30,6 +32,7 @@ interface DashboardModuleProps {
   partners: Profile[];
   netWorthCents: number;
   onOpenNewTransaction: () => void;
+  onRefresh?: () => Promise<void>;
 }
 
 export function DashboardModule({
@@ -39,7 +42,10 @@ export function DashboardModule({
   partners,
   netWorthCents,
   onOpenNewTransaction,
+  onRefresh,
 }: DashboardModuleProps) {
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
   // Cálculos do mês atual
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -79,16 +85,6 @@ export function DashboardModule({
       .reduce((acc, t) => acc + t.amount_cents, 0);
     return { ...cat, totalCents: total };
   }).filter((c) => c.totalCents > 0);
-
-  const getInitials = (name?: string) => {
-    if (!name) return 'EQ';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -246,15 +242,28 @@ export function DashboardModule({
           <div className="border-b border-hairline pb-3 flex items-center justify-between">
             <div>
               <span className="micro-label text-[9px] sm:text-[10px]">Contas & Saldos</span>
-              <h3 className="font-display text-base sm:text-lg font-medium text-ink">Contas Integradas</h3>
+              <h3 className="font-display text-base sm:text-lg font-medium text-ink">Nossas Contas</h3>
             </div>
-            <span className="text-xs text-ink-3 font-mono">{accounts.length} contas</span>
+            <button
+              onClick={() => setIsAccountModalOpen(true)}
+              className="flex items-center gap-1 text-xs text-brand hover:underline font-semibold cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nova Conta</span>
+            </button>
           </div>
 
           <div className="divide-y divide-hairline">
             {accounts.length === 0 ? (
-              <div className="py-6 text-center text-xs text-ink-3">
-                <p>Nenhuma conta cadastrada.</p>
+              <div className="py-6 text-center text-xs text-ink-3 space-y-2">
+                <Landmark className="w-6 h-6 mx-auto text-ink-3" />
+                <p>Nenhuma conta bancária cadastrada.</p>
+                <button
+                  onClick={() => setIsAccountModalOpen(true)}
+                  className="px-2.5 py-1 bg-brand text-paper rounded-[4px] font-semibold text-[11px] cursor-pointer"
+                >
+                  Adicionar Conta
+                </button>
               </div>
             ) : (
               accounts.map((acc) => (
@@ -263,7 +272,7 @@ export function DashboardModule({
                     <div className="flex items-center gap-2">
                       <p className="text-xs font-semibold text-ink">{acc.name}</p>
                       <span className="text-[10px] px-1.5 py-0.2 bg-surface-2 border border-hairline rounded-[4px] text-ink-3 capitalize">
-                        {acc.type}
+                        {acc.type === 'checking' ? 'Corrente' : acc.type === 'credit_card' ? 'Cartão' : acc.type === 'investment' ? 'Investimento' : acc.type}
                       </span>
                     </div>
                     <p className="text-[11px] text-ink-3">
@@ -317,7 +326,7 @@ export function DashboardModule({
                       tx.type === 'income' ? 'text-brand' : 'text-danger'
                     }`}
                   >
-                    {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
+                    {tx.type === 'income' ? '+' : '−'} {formatCentsToBRL(tx.amount_cents)}
                   </span>
                 </div>
               ))
@@ -326,6 +335,13 @@ export function DashboardModule({
         </div>
 
       </section>
+
+      {/* Modal de Nova Conta */}
+      <AddAccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        onSuccess={onRefresh || (async () => {})}
+      />
 
     </div>
   );
