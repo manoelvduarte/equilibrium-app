@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText, generateText, StreamTextResult, GenerateTextResult } from 'ai';
+import { streamText, generateText } from 'ai';
 
 export const MODEL_PRIMARY = 'nvidia/nemotron-3.5-lightning:free';
 export const MODEL_FALLBACK_1 = 'nvidia/nemotron-3-super-120b-a12b:free';
@@ -47,7 +47,7 @@ export function getChatModel(modelOverride?: string) {
  */
 export async function streamTextWithFallback(
   params: Omit<Parameters<typeof streamText>[0], 'model'> & { model?: any }
-): Promise<StreamTextResult<any>> {
+): Promise<ReturnType<typeof streamText>> {
   const configuredModel = process.env.AI_MODEL || MODEL_PRIMARY;
   const modelsToTry = [
     configuredModel,
@@ -96,7 +96,7 @@ export async function streamTextWithFallback(
  */
 export async function generateTextWithFallback(
   params: Omit<Parameters<typeof generateText>[0], 'model'> & { model?: any }
-): Promise<GenerateTextResult<any> & { usedModel: string }> {
+): Promise<Awaited<ReturnType<typeof generateText>> & { usedModel: string }> {
   const configuredModel = process.env.AI_MODEL || MODEL_PRIMARY;
   const modelsToTry = [
     configuredModel,
