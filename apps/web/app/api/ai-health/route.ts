@@ -1,6 +1,5 @@
-import { generateText } from 'ai';
-import { google } from '@ai-sdk/google';
 import { getUserFromRequest } from '@/lib/ai/auth';
+import { generateTextWithFallback, MODEL_PRIMARY } from '@/lib/ai/provider';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -12,84 +11,51 @@ export async function GET(req: Request) {
     return Response.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   const envOk = Boolean(apiKey && apiKey.trim().length > 0);
 
   if (!envOk) {
     return Response.json(
       {
         envOk: false,
+        provider: 'openrouter',
         pingOk: false,
-        model: process.env.AI_MODEL || 'gemini-2.5-flash',
-        providerError: 'GOOGLE_GENERATIVE_AI_API_KEY não encontrada em apps/web/.env.local',
+        model: process.env.AI_MODEL || MODEL_PRIMARY,
+        providerError: 'OPENROUTER_API_KEY não encontrada em apps/web/.env.local',
       },
       { status: 500 }
     );
   }
 
-  let modelName = process.env.AI_MODEL || 'gemini-2.5-flash';
-  console.log(`[AI Health] AI ready: model=${modelName} key=presente`);
+  const configuredModel = process.env.AI_MODEL || MODEL_PRIMARY;
+  console.log(`[AI Health] OpenRouter ready: configuredModel=${configuredModel} key=presente`);
 
   try {
-    // 2. Teste de geração mínima (Ping)
-    const { text } = await generateText({
-      model: google(modelName),
+    // 2. Teste de geração mínima com cascata de fallback
+    const result = await generateTextWithFallback({
       prompt: 'ping',
       maxTokens: 5,
     });
 
     return Response.json({
       envOk: true,
+      provider: 'openrouter',
       pingOk: true,
-      model: modelName,
-      response: text.trim(),
+      model: result.usedModel,
+      response: result.text.trim(),
       providerError: null,
     });
-  } catch (primaryErr: any) {
-    const primaryErrMsg = primaryErr?.message || String(primaryErr);
-    console.warn(`[AI Health] Falha no modelo principal ${modelName}:`, primaryErrMsg);
-
-    // 3. Fallback para gemini-2.0-flash se for erro de modelo (404/not found)
-    if (
-      modelName !== 'gemini-2.0-flash' &&
-      (primaryErrMsg.includes('404') ||
-        primaryErrMsg.toLowerCase().includes('not found') ||
-        primaryErrMsg.toLowerCase().includes('unsupported'))
-    ) {
-      try {
-        console.log('[AI Health] Tentando fallback para gemini-2.0-flash...');
-        const { text: fallbackText } = await generateText({
-          model: google('gemini-2.0-flash'),
-          prompt: 'ping',
-          maxTokens: 5,
-        });
-
-        return Response.json({
-          envOk: true,
-          pingOk: true,
-          model: 'gemini-2.0-flash (fallback)',
-          response: fallbackText.trim(),
-          providerError: null,
-        });
-      } catch (fallbackErr: any) {
-        return Response.json(
-          {
-            envOk: true,
-            pingOk: false,
-            model: 'gemini-2.0-flash',
-            providerError: fallbackErr?.message || String(fallbackErr),
-          },
-          { status: 502 }
-        );
-      }
-    }
+  } catch (err: any) {
+    const errMsg = err?.message || String(err);
+    console.warn('[AI Health] Falha no teste OpenRouter:', errMsg);
 
     return Response.json(
       {
         envOk: true,
+        provider: 'openrouter',
         pingOk: false,
-        model: modelName,
-        providerError: primaryErrMsg,
+        model: configuredModel,
+        providerError: errMsg,
       },
       { status: 502 }
     );
