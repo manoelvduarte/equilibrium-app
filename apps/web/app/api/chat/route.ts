@@ -1,17 +1,16 @@
-import { streamText } from 'ai';
-import { google } from '@ai-sdk/google';
 import { getUserFromRequest } from '@/lib/ai/auth';
 import { createAssistantTools } from '@/lib/ai/tools';
+import { streamTextWithFallback, MODEL_PRIMARY } from '@/lib/ai/provider';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   // 1. Guard de ENV
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return Response.json(
-      { error: 'GOOGLE_GENERATIVE_AI_API_KEY não configurada em apps/web/.env.local' },
+      { error: 'OPENROUTER_API_KEY não configurada em apps/web/.env.local' },
       { status: 500 }
     );
   }
@@ -101,13 +100,12 @@ ${formattedRecent.map((r) => `  • ${r.date}: ${r.description} - ${r.amount} ($
   // 5. Tools com Fechamento sob o Client do Usuário
   const tools = createAssistantTools(supabase, profile.household_id, profile.id);
 
-  // 6. Chamada com Gemini e Fallback Resiliente
-  let modelName = process.env.AI_MODEL || 'gemini-2.5-flash';
-  console.log(`[Chat Route] AI ready: model=${modelName} key=presente`);
+  // 6. Chamada com OpenRouter e Fallback Resiliente
+  const configuredModel = process.env.AI_MODEL || MODEL_PRIMARY;
+  console.log(`[Chat Route] OpenRouter ready: configuredModel=${configuredModel} key=presente`);
 
   try {
-    const result = streamText({
-      model: google(modelName),
+    const result = await streamTextWithFallback({
       system: systemPrompt,
       messages,
       tools,
@@ -131,34 +129,10 @@ ${formattedRecent.map((r) => `  • ${r.date}: ${r.description} - ${r.amount} ($
     return result.toDataStreamResponse();
   } catch (err: any) {
     const errMsg = err?.message || String(err);
-    console.error(`[Chat Route] Erro no stream com ${modelName}:`, errMsg);
-
-    // Fallback de modelo se for erro de modelo
-    if (
-      modelName !== 'gemini-2.0-flash' &&
-      (errMsg.includes('404') || errMsg.toLowerCase().includes('not found'))
-    ) {
-      console.log('[Chat Route] Tentando fallback para gemini-2.0-flash...');
-      try {
-        const fallbackResult = streamText({
-          model: google('gemini-2.0-flash'),
-          system: systemPrompt,
-          messages,
-          tools,
-          temperature: 0.2,
-          maxSteps: 5,
-        });
-        return fallbackResult.toDataStreamResponse();
-      } catch (fbErr: any) {
-        return Response.json(
-          { error: `Falha no modelo Gemini: ${fbErr?.message || errMsg}` },
-          { status: 502 }
-        );
-      }
-    }
+    console.error(`[Chat Route] Erro na chamada OpenRouter:`, errMsg);
 
     return Response.json(
-      { error: `Falha no provedor de IA: ${errMsg}` },
+      { error: `Falha no provedor de IA OpenRouter: ${errMsg}` },
       { status: 500 }
     );
   }
