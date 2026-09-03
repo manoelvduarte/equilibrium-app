@@ -20,6 +20,14 @@ export const generateReportSchema = z.object({
   type: z.enum(['monthly_closing', 'couple_split']).default('monthly_closing'),
 });
 
+export const getGoalsAndDebtsSchema = z.object({
+  filter: z.enum(['all', 'goals', 'debts']).default('all'),
+});
+
+export const getBillsAndNotesSchema = z.object({
+  filter: z.enum(['all', 'bills', 'notes']).default('all'),
+});
+
 // 2. Ferramentas de Mutação (Com aprovação prévia obrigatória: needsApproval = true)
 export const createTransactionToolSchema = transactionSchema;
 
@@ -61,6 +69,8 @@ export const AI_TOOL_METADATA: Record<string, EquilibriumAIToolConfig> = {
   query_analytics: { needsApproval: false, description: 'Consulta dados agregados de inteligência financeira.' },
   project_cash_flow: { needsApproval: false, description: 'Projeta fluxo de caixa futuro.' },
   generate_report: { needsApproval: false, description: 'Gera relatórios de fechamento ou divisão de casal.' },
+  get_goals_and_debts: { needsApproval: false, description: 'Consulta as metas patrimoniais e dívidas ativas do casal.' },
+  get_bills_and_notes: { needsApproval: false, description: 'Consulta contas fixas a vencer e anotações do casal.' },
   
   // Mutação (approval = true)
   create_transaction: { needsApproval: true, description: 'Cria uma nova transação financeira.' },

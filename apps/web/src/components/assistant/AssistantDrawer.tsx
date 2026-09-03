@@ -156,8 +156,8 @@ export function AssistantDrawer({ onActionExecuted }: AssistantDrawerProps) {
                 <Bot className="w-4 h-4 stroke-[1.5]" />
               </div>
               <div>
-                <h2 className="font-display font-medium text-sm text-ink">Assistente</h2>
-                <span className="micro-label text-[9px]">Executa apenas com sua aprovação</span>
+                <h2 className="font-display font-medium text-sm text-ink">Assistente • Zero7Nove</h2>
+                <span className="micro-label text-[9px]">Manoel & Giovana • Marco 07/09</span>
               </div>
             </div>
 
@@ -189,19 +189,25 @@ export function AssistantDrawer({ onActionExecuted }: AssistantDrawerProps) {
                 </div>
                 <div className="space-y-1">
                   <p className="font-display text-sm font-medium text-ink">
-                    Como posso ajudar nas finanças do casal hoje?
+                    Como posso ajudar Manoel & Giovana hoje?
                   </p>
                   <p className="text-xs text-ink-2">
-                    Pergunte sobre seus gastos ou peça para registrar movimentações.
+                    Consulte metas de viagem, orçamentos, dívidas ou registre transações em € ou R$.
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-2 pt-2 text-left">
                   <button
-                    onClick={() => handleSuggestionClick('Qual o resumo financeiro deste mês?')}
+                    onClick={() => handleSuggestionClick('Qual o resumo financeiro deste mês em €?')}
                     className="px-3 py-2 bg-paper hover:bg-surface-2 border border-hairline rounded-[6px] text-xs text-ink transition-editorial cursor-pointer"
                   >
-                    • Qual o resumo financeiro deste mês?
+                    • Qual o resumo financeiro deste mês em €?
+                  </button>
+                  <button
+                    onClick={() => handleSuggestionClick('Como estão as nossas metas de viagem e reservas?')}
+                    className="px-3 py-2 bg-paper hover:bg-surface-2 border border-hairline rounded-[6px] text-xs text-ink transition-editorial cursor-pointer"
+                  >
+                    • Como estão as nossas metas de viagem e reservas?
                   </button>
                   <button
                     onClick={() => handleSuggestionClick('Onde gastamos mais nas últimas semanas?')}
@@ -210,10 +216,10 @@ export function AssistantDrawer({ onActionExecuted }: AssistantDrawerProps) {
                     • Onde gastamos mais nas últimas semanas?
                   </button>
                   <button
-                    onClick={() => handleSuggestionClick('Crie uma despesa de Mercado de R$ 89,90 no cartão')}
+                    onClick={() => handleSuggestionClick('Crie uma despesa de Mercado de € 45,00 no cartão')}
                     className="px-3 py-2 bg-paper hover:bg-surface-2 border border-hairline rounded-[6px] text-xs text-ink transition-editorial cursor-pointer"
                   >
-                    • Crie uma despesa de Mercado de R$ 89,90 no cartão
+                    • Crie uma despesa de Mercado de € 45,00 no cartão
                   </button>
                 </div>
 

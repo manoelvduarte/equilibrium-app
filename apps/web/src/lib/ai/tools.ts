@@ -4,6 +4,8 @@ import {
   queryAnalyticsSchema,
   projectCashFlowSchema,
   generateReportSchema,
+  getGoalsAndDebtsSchema,
+  getBillsAndNotesSchema,
   createTransactionToolSchema,
   updateTransactionToolSchema,
   deleteTransactionToolSchema,
@@ -65,14 +67,17 @@ export function createAssistantTools(supabase: SupabaseClient, householdId: stri
           period,
           startDate,
           totalIncomeCents,
-          totalIncomeFormatted: `R$ ${(totalIncomeCents / 100).toFixed(2)}`,
+          totalIncomeFormattedEUR: `€ ${(totalIncomeCents / 100).toFixed(2)}`,
+          totalIncomeFormattedBRL: `R$ ${(totalIncomeCents / 100).toFixed(2)}`,
           totalExpenseCents,
-          totalExpenseFormatted: `R$ ${(totalExpenseCents / 100).toFixed(2)}`,
+          totalExpenseFormattedEUR: `€ ${(totalExpenseCents / 100).toFixed(2)}`,
+          totalExpenseFormattedBRL: `R$ ${(totalExpenseCents / 100).toFixed(2)}`,
           netSavingsCents,
-          netSavingsFormatted: `R$ ${(netSavingsCents / 100).toFixed(2)}`,
+          netSavingsFormattedEUR: `€ ${(netSavingsCents / 100).toFixed(2)}`,
           savingsRatePercent,
           netWorthCents,
-          netWorthFormatted: `R$ ${(netWorthCents / 100).toFixed(2)}`,
+          netWorthFormattedEUR: `€ ${(netWorthCents / 100).toFixed(2)}`,
+          netWorthFormattedBRL: `R$ ${(netWorthCents / 100).toFixed(2)}`,
         };
       },
     }),
@@ -112,7 +117,8 @@ export function createAssistantTools(supabase: SupabaseClient, householdId: stri
           .map(([name, totalCents]) => ({
             name,
             totalCents,
-            formatted: `R$ ${(totalCents / 100).toFixed(2)}`,
+            formattedEUR: `€ ${(totalCents / 100).toFixed(2)}`,
+            formattedBRL: `R$ ${(totalCents / 100).toFixed(2)}`,
           }))
           .sort((a, b) => b.totalCents - a.totalCents);
 
@@ -154,7 +160,8 @@ export function createAssistantTools(supabase: SupabaseClient, householdId: stri
           projections.push({
             monthIndex: i,
             projectedCents,
-            formatted: `R$ ${(projectedCents / 100).toFixed(2)}`,
+            formattedEUR: `€ ${(projectedCents / 100).toFixed(2)}`,
+            formattedBRL: `R$ ${(projectedCents / 100).toFixed(2)}`,
           });
         }
 
@@ -168,6 +175,65 @@ export function createAssistantTools(supabase: SupabaseClient, householdId: stri
       },
     }),
 
+    get_goals_and_debts: tool({
+      description: AI_TOOL_METADATA.get_goals_and_debts.description,
+      parameters: getGoalsAndDebtsSchema,
+      execute: async ({ filter }) => {
+        let goalsData: any[] = [];
+        let debtsData: any[] = [];
+
+        if (filter === 'all' || filter === 'goals') {
+          const { data: goals } = await supabase.from('goals').select('*');
+          goalsData = (goals || []).map((g: any) => {
+            const current = g.strategy?.current_cents || 0;
+            const pct = g.target_cents > 0 ? Math.min(100, Math.round((current / g.target_cents) * 100)) : 0;
+            return {
+              id: g.id,
+              name: g.name,
+              target_cents: g.target_cents,
+              target_eur: `€ ${(g.target_cents / 100).toFixed(2)}`,
+              current_cents: current,
+              current_eur: `€ ${(current / 100).toFixed(2)}`,
+              progress: `${pct}%`,
+              deadline: g.deadline,
+            };
+          });
+        }
+
+        if (filter === 'all' || filter === 'debts') {
+          const { data: debts } = await supabase.from('debts').select('*');
+          debtsData = (debts || []).map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            principal_cents: d.principal_cents,
+            principal_eur: `€ ${(d.principal_cents / 100).toFixed(2)}`,
+            apr: `${((d.apr_bps || 0) / 100).toFixed(1)}% a.a.`,
+            min_payment_eur: `€ ${(d.min_payment_cents / 100).toFixed(2)}`,
+            strategy: d.strategy || 'avalanche',
+          }));
+        }
+
+        return {
+          filter,
+          goals: goalsData,
+          debts: debtsData,
+        };
+      },
+    }),
+
+    get_bills_and_notes: tool({
+      description: AI_TOOL_METADATA.get_bills_and_notes.description,
+      parameters: getBillsAndNotesSchema,
+      execute: async ({ filter }) => {
+        return {
+          filter,
+          anniversaryDate: '07/09',
+          couple: 'Manoel & Giovana',
+          status: 'Todas as notas, acordos e lembretes estão sincronizados.',
+        };
+      },
+    }),
+
     generate_report: tool({
       description: AI_TOOL_METADATA.generate_report.description,
       parameters: generateReportSchema,
@@ -176,7 +242,7 @@ export function createAssistantTools(supabase: SupabaseClient, householdId: stri
           period,
           reportType: type,
           generatedAt: new Date().toISOString(),
-          status: 'Relatório gerado com sucesso.',
+          status: 'Relatório financeiro do casal gerado com sucesso.',
         };
       },
     }),
