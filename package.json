@@ -6,11 +6,13 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "test": "turbo test",
+    "test:audit": "tsx scripts/user_simulation_audit.ts",
     "test:rls": "pnpm --filter @equilibrium/db test:rls",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.112.4",
+    "postgres": "^3.4.9",
     "prettier": "^3.5.0",
     "tsx": "^4.23.13",
     "turbo": "^2.4.0",
