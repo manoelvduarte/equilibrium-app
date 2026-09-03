@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatCentsToBRL, formatRelativeDate, parseBRLToCents, CategoryIcon } from '@equilibrium/ui';
 import { Account, Category, Profile, Transaction } from '@/hooks/useHouseholdData';
 import { ImportWizardModal } from './import/ImportWizardModal';
+import { RecurringIncomeManager } from './recurrences/RecurringIncomeManager';
 import {
   Plus,
   Trash2,
@@ -57,6 +58,19 @@ export function TransactionsModule({
   const supabase = createClient();
   const showModal = isNewModalOpen || internalModalOpen;
 
+  // Sincroniza conta e categoria padrão quando carregarem
+  React.useEffect(() => {
+    if (!accountId && accounts.length > 0) {
+      setAccountId(accounts[0].id);
+    }
+  }, [accounts, accountId]);
+
+  React.useEffect(() => {
+    if (!categoryId && categories.length > 0) {
+      setCategoryId(categories[0].id);
+    }
+  }, [categories, categoryId]);
+
   const handleCloseModal = () => {
     setInternalModalOpen(false);
     onCloseNewModal?.();
@@ -69,10 +83,12 @@ export function TransactionsModule({
     e.preventDefault();
     const cents = parseBRLToCents(amountStr);
     if (cents <= 0) {
-      setError('Informe um valor válido em reais.');
+      setError('Informe um valor válido maior que zero.');
       return;
     }
-    if (!accountId || !userProfile?.household_id) {
+
+    const targetAccountId = accountId || accounts[0]?.id;
+    if (!targetAccountId) {
       setError('Selecione uma conta válida.');
       return;
     }
@@ -81,12 +97,32 @@ export function TransactionsModule({
     setError(null);
 
     try {
+      let householdId = userProfile?.household_id;
+      let userId = userProfile?.id;
+
+      if (!householdId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          userId = user.id;
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('household_id')
+            .eq('id', user.id)
+            .single();
+          householdId = prof?.household_id;
+        }
+      }
+
+      if (!householdId) {
+        throw new Error('Conta familiar não identificada. Por favor, recarregue a página.');
+      }
+
       const { error: insertError } = await supabase.from('transactions').insert({
-        household_id: userProfile.household_id,
-        account_id: accountId,
+        household_id: householdId,
+        account_id: targetAccountId,
         category_id: categoryId || null,
-        created_by_id: userProfile.id,
-        description,
+        created_by_id: userId,
+        description: description.trim(),
         amount_cents: cents,
         type,
         date: occurredAt,
@@ -152,6 +188,14 @@ export function TransactionsModule({
   return (
     <div className="space-y-6">
       
+      {/* Gestão de Salários & Receitas Recorrentes com Confirmação e Ajuste */}
+      <RecurringIncomeManager
+        userProfile={userProfile}
+        accounts={accounts}
+        categories={categories}
+        onRefresh={onRefresh}
+      />
+
       {/* Header & Filter Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
         <div>

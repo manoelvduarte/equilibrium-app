@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { parseBRLToCents } from '@equilibrium/ui';
-import { createGoal } from '@/actions/financeActions';
+import { createClient } from '@/lib/supabase/client';
 import { Target, X, Plus, AlertCircle, Loader2 } from 'lucide-react';
 
 interface AddGoalModalProps {
@@ -30,7 +30,7 @@ export function AddGoalModal({ isOpen, onClose, onSuccess }: AddGoalModalProps) 
 
     const targetCents = parseBRLToCents(targetStr);
     if (targetCents <= 0) {
-      setErrorMessage('Informe um valor alvo válido.');
+      setErrorMessage('Informe um valor alvo válido maior que zero.');
       return;
     }
 
@@ -40,12 +40,35 @@ export function AddGoalModal({ isOpen, onClose, onSuccess }: AddGoalModalProps) 
     setErrorMessage(null);
 
     try {
-      await createGoal({
-        name: name.trim(),
-        targetCents,
-        currentCents,
-        deadline: deadlineTo || null,
-      });
+      const supabase = createClient();
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !user) {
+        throw new Error('Sessão expirada. Por favor, recarregue a página ou faça login novamente.');
+      }
+
+      const { data: profile, error: profErr } = await supabase
+        .from('profiles')
+        .select('household_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profErr || !profile?.household_id) {
+        throw new Error('Perfil não associado a uma conta familiar.');
+      }
+
+      const { error: insertError } = await supabase
+        .from('goals')
+        .insert({
+          household_id: profile.household_id,
+          name: name.trim(),
+          target_cents: targetCents,
+          deadline: deadlineTo || null,
+          strategy: JSON.stringify({ current_cents: currentCents }),
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
 
       setName('');
       setTargetStr('');
@@ -54,6 +77,7 @@ export function AddGoalModal({ isOpen, onClose, onSuccess }: AddGoalModalProps) 
       onClose();
       await onSuccess();
     } catch (err: any) {
+      console.error('Erro ao salvar meta:', err);
       setErrorMessage(err.message || 'Falha ao salvar meta.');
     } finally {
       setLoading(false);
@@ -98,7 +122,7 @@ export function AddGoalModal({ isOpen, onClose, onSuccess }: AddGoalModalProps) 
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Reserva de Emergência, Viagem Europa, Entrada Apartamento"
+              placeholder="Ex: Viagem Europa, Reserva de Emergência, Carro Novo"
               className="w-full p-2.5 bg-paper border border-hairline rounded-[6px] text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
             />
           </div>
@@ -107,14 +131,14 @@ export function AddGoalModal({ isOpen, onClose, onSuccess }: AddGoalModalProps) 
             {/* Valor Alvo */}
             <div className="space-y-1">
               <label className="block font-semibold uppercase tracking-[0.08em] text-ink-3 text-[10px]">
-                Valor Alvo (R$)
+                Valor Alvo (€ / R$)
               </label>
               <input
                 type="text"
                 required
                 value={targetStr}
                 onChange={(e) => setTargetStr(e.target.value)}
-                placeholder="Ex: 30.000,00"
+                placeholder="Ex: 5.000,00"
                 className="w-full p-2.5 bg-paper border border-hairline rounded-[6px] text-xs font-mono text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
               />
             </div>
@@ -122,13 +146,13 @@ export function AddGoalModal({ isOpen, onClose, onSuccess }: AddGoalModalProps) 
             {/* Saldo Atual */}
             <div className="space-y-1">
               <label className="block font-semibold uppercase tracking-[0.08em] text-ink-3 text-[10px]">
-                Saldo Inicial Já Guardado (R$)
+                Já Guardado (€ / R$)
               </label>
               <input
                 type="text"
                 value={currentStr}
                 onChange={(e) => setCurrentStr(e.target.value)}
-                placeholder="Ex: 5.000,00"
+                placeholder="Ex: 1.000,00"
                 className="w-full p-2.5 bg-paper border border-hairline rounded-[6px] text-xs font-mono text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
               />
             </div>

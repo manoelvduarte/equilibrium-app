@@ -5,7 +5,7 @@ import { formatCentsToBRL, parseBRLToCents } from '@equilibrium/ui';
 import { Goal, Debt } from '@/hooks/useHouseholdData';
 import { AddGoalModal } from './goals/AddGoalModal';
 import { AddDebtModal } from './goals/AddDebtModal';
-import { contributeToGoal, deleteGoal, amortizeDebt, deleteDebt } from '@/actions/financeActions';
+import { createClient } from '@/lib/supabase/client';
 import { Target, TrendingDown, Plus, Trash2, ArrowUpRight, ArrowDownRight, Inbox, CheckCircle2 } from 'lucide-react';
 
 interface GoalsDebtsModuleProps {
@@ -27,6 +27,8 @@ export function GoalsDebtsModule({ goals, debts, onRefresh }: GoalsDebtsModulePr
   const [amortizeDebtId, setAmortizeDebtId] = useState<string | null>(null);
   const [amortizeAmountStr, setAmortizeAmountStr] = useState('');
 
+  const supabase = createClient();
+
   const totalGoalsTarget = goals.reduce((acc, g) => acc + g.target_cents, 0);
   const totalGoalsCurrent = goals.reduce((acc, g) => acc + g.current_cents, 0);
   const totalDebts = debts.reduce((acc, d) => acc + d.principal_cents, 0);
@@ -43,7 +45,18 @@ export function GoalsDebtsModule({ goals, debts, onRefresh }: GoalsDebtsModulePr
     const addCents = parseBRLToCents(contributeAmountStr);
     if (addCents <= 0) return;
     try {
-      await contributeToGoal(goalId, addCents);
+      const targetGoal = goals.find((g) => g.id === goalId);
+      const currentCents = targetGoal ? targetGoal.current_cents : 0;
+      const updatedCurrent = currentCents + addCents;
+      const newStrategy = JSON.stringify({ current_cents: updatedCurrent });
+
+      const { error } = await supabase
+        .from('goals')
+        .update({ strategy: newStrategy })
+        .eq('id', goalId);
+
+      if (error) throw error;
+
       setContributeGoalId(null);
       setContributeAmountStr('');
       await onRefresh();
@@ -55,7 +68,12 @@ export function GoalsDebtsModule({ goals, debts, onRefresh }: GoalsDebtsModulePr
   const handleDeleteGoal = async (goalId: string) => {
     if (!confirm('Deseja excluir esta meta?')) return;
     try {
-      await deleteGoal(goalId);
+      const { error } = await supabase
+        .from('goals')
+        .delete()
+        .eq('id', goalId);
+
+      if (error) throw error;
       await onRefresh();
     } catch (err: any) {
       alert(err.message || 'Erro ao excluir meta');
@@ -66,7 +84,17 @@ export function GoalsDebtsModule({ goals, debts, onRefresh }: GoalsDebtsModulePr
     const amountCents = parseBRLToCents(amortizeAmountStr);
     if (amountCents <= 0) return;
     try {
-      await amortizeDebt(debtId, amountCents);
+      const targetDebt = debts.find((d) => d.id === debtId);
+      const currentPrincipal = targetDebt ? targetDebt.principal_cents : 0;
+      const newPrincipal = Math.max(0, currentPrincipal - amountCents);
+
+      const { error } = await supabase
+        .from('debts')
+        .update({ principal_cents: newPrincipal })
+        .eq('id', debtId);
+
+      if (error) throw error;
+
       setAmortizeDebtId(null);
       setAmortizeAmountStr('');
       await onRefresh();
@@ -78,7 +106,12 @@ export function GoalsDebtsModule({ goals, debts, onRefresh }: GoalsDebtsModulePr
   const handleDeleteDebt = async (debtId: string) => {
     if (!confirm('Deseja excluir esta dívida?')) return;
     try {
-      await deleteDebt(debtId);
+      const { error } = await supabase
+        .from('debts')
+        .delete()
+        .eq('id', debtId);
+
+      if (error) throw error;
       await onRefresh();
     } catch (err: any) {
       alert(err.message || 'Erro ao excluir dívida');

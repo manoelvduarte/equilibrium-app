@@ -1,7 +1,31 @@
 'use server';
 
-import { getUserFromRequest } from '@/lib/ai/auth';
+import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+
+/**
+ * Obtém o cliente Supabase do servidor autenticado via cookies do Next.js
+ */
+async function getServerAuth() {
+  const supabase = await createClient();
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  
+  if (userErr || !user) {
+    throw new Error('Sessão expirada ou usuário não autenticado.');
+  }
+
+  const { data: profile, error: profErr } = await supabase
+    .from('profiles')
+    .select('id, full_name, household_id')
+    .eq('id', user.id)
+    .single();
+
+  if (profErr || !profile?.household_id) {
+    throw new Error('Perfil familiar não encontrado.');
+  }
+
+  return { supabase, user, profile };
+}
 
 // ==========================================
 // 1. METAS (GOALS)
@@ -16,8 +40,7 @@ export interface CreateGoalParams {
 }
 
 export async function createGoal(params: CreateGoalParams) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { data, error } = await supabase
     .from('goals')
@@ -41,8 +64,7 @@ export async function createGoal(params: CreateGoalParams) {
 }
 
 export async function contributeToGoal(goalId: string, addCents: number) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { data: goal } = await supabase
     .from('goals')
@@ -75,8 +97,7 @@ export async function contributeToGoal(goalId: string, addCents: number) {
 }
 
 export async function deleteGoal(goalId: string) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { error } = await supabase
     .from('goals')
@@ -102,8 +123,7 @@ export interface CreateDebtParams {
 }
 
 export async function createDebt(params: CreateDebtParams) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const aprBps = Math.round(params.aprPercent * 100); // 14.5% -> 1450 bps
 
@@ -130,8 +150,7 @@ export async function createDebt(params: CreateDebtParams) {
 }
 
 export async function amortizeDebt(debtId: string, amountCents: number) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { data: debt } = await supabase
     .from('debts')
@@ -155,8 +174,7 @@ export async function amortizeDebt(debtId: string, amountCents: number) {
 }
 
 export async function deleteDebt(debtId: string) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { error } = await supabase
     .from('debts')
@@ -175,24 +193,26 @@ export async function deleteDebt(debtId: string) {
 
 export interface CreateAccountParams {
   name: string;
-  type: 'checking' | 'savings' | 'credit_card' | 'investment' | 'cash' | 'other';
+  type: 'checking' | 'savings' | 'credit_card' | 'credit' | 'investment' | 'cash';
   initialBalanceCents?: number;
   visibility?: 'private' | 'balance_only' | 'shared';
 }
 
 export async function createAccount(params: CreateAccountParams) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
+
+  // Respeita constraint checking, savings, credit, investment, cash
+  const accountType = params.type === 'credit_card' ? 'credit' : params.type;
 
   const { data: account, error: accErr } = await supabase
     .from('accounts')
     .insert({
       household_id: profile.household_id,
       name: params.name,
-      type: params.type,
+      type: accountType,
       visibility: params.visibility || 'shared',
       owner_id: profile.id,
-      currency: 'BRL',
+      currency: 'EUR',
     })
     .select()
     .single();
@@ -220,8 +240,7 @@ export async function createAccount(params: CreateAccountParams) {
 }
 
 export async function deleteAccount(accountId: string) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { error } = await supabase
     .from('accounts')
@@ -246,8 +265,7 @@ export interface SetBudgetLimitParams {
 }
 
 export async function setBudgetLimit(params: SetBudgetLimitParams) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { data, error } = await supabase
     .from('budgets')
@@ -285,8 +303,7 @@ export interface CreateCategoryParams {
 }
 
 export async function createCategory(params: CreateCategoryParams) {
-  const authContext = await getUserFromRequest(new Request('http://localhost/actions'));
-  const { supabase, profile } = authContext;
+  const { supabase, profile } = await getServerAuth();
 
   const { data, error } = await supabase
     .from('categories')

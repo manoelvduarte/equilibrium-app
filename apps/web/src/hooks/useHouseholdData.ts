@@ -174,9 +174,9 @@ export function useHouseholdData(): HouseholdSummary {
       } else if (profileData?.household_id) {
         // Auto-seed de Contas Iniciais
         const defaultAccounts = [
-          { name: 'Conta Corrente Principal', type: 'checking', visibility: 'shared', currency: 'BRL', household_id: profileData.household_id, owner_id: profileData.id },
-          { name: 'Cartão de Crédito Conjunto', type: 'credit_card', visibility: 'shared', currency: 'BRL', household_id: profileData.household_id, owner_id: profileData.id },
-          { name: 'Reserva de Emergência', type: 'investment', visibility: 'shared', currency: 'BRL', household_id: profileData.household_id, owner_id: profileData.id },
+          { name: 'Conta Principal (Salário & Contas)', type: 'checking' as const, visibility: 'shared' as const, currency: 'EUR', household_id: profileData.household_id, owner_id: profileData.id },
+          { name: 'Cartão Conjunto (Dia a Dia)', type: 'credit' as const, visibility: 'shared' as const, currency: 'EUR', household_id: profileData.household_id, owner_id: profileData.id },
+          { name: 'Reserva de Emergência & Viagens', type: 'investment' as const, visibility: 'shared' as const, currency: 'EUR', household_id: profileData.household_id, owner_id: profileData.id },
         ];
 
         const { data: insertedAccs } = await supabase

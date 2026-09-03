@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { parseBRLToCents } from '@equilibrium/ui';
-import { createDebt } from '@/actions/financeActions';
+import { createClient } from '@/lib/supabase/client';
 import { TrendingDown, X, Plus, AlertCircle, Loader2 } from 'lucide-react';
 
 interface AddDebtModalProps {
@@ -31,24 +31,48 @@ export function AddDebtModal({ isOpen, onClose, onSuccess }: AddDebtModalProps) 
 
     const principalCents = parseBRLToCents(principalStr);
     if (principalCents <= 0) {
-      setErrorMessage('Informe o saldo devedor principal.');
+      setErrorMessage('Informe o saldo devedor principal maior que zero.');
       return;
     }
 
     const aprNum = parseFloat(aprPercent.replace(',', '.')) || 0;
     const minPaymentCents = minPaymentStr ? parseBRLToCents(minPaymentStr) : 0;
+    const aprBps = Math.round(aprNum * 100);
 
     setLoading(true);
     setErrorMessage(null);
 
     try {
-      await createDebt({
-        name: name.trim(),
-        principalCents,
-        aprPercent: aprNum,
-        minPaymentCents,
-        strategy,
-      });
+      const supabase = createClient();
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !user) {
+        throw new Error('Sessão expirada. Por favor, recarregue a página ou faça login novamente.');
+      }
+
+      const { data: profile, error: profErr } = await supabase
+        .from('profiles')
+        .select('household_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profErr || !profile?.household_id) {
+        throw new Error('Perfil não associado a uma conta familiar.');
+      }
+
+      const { error: insertError } = await supabase
+        .from('debts')
+        .insert({
+          household_id: profile.household_id,
+          name: name.trim(),
+          principal_cents: principalCents,
+          apr_bps: aprBps,
+          min_payment_cents: minPaymentCents,
+          strategy,
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
 
       setName('');
       setPrincipalStr('');
@@ -57,6 +81,7 @@ export function AddDebtModal({ isOpen, onClose, onSuccess }: AddDebtModalProps) 
       onClose();
       await onSuccess();
     } catch (err: any) {
+      console.error('Erro ao cadastrar dívida:', err);
       setErrorMessage(err.message || 'Falha ao cadastrar dívida.');
     } finally {
       setLoading(false);
@@ -101,7 +126,7 @@ export function AddDebtModal({ isOpen, onClose, onSuccess }: AddDebtModalProps) 
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Financiamento Imobiliário, Cartão Rotativo, Empréstimo Auto"
+              placeholder="Ex: Financiamento Imobiliário, Cartão, Empréstimo"
               className="w-full p-2.5 bg-paper border border-hairline rounded-[6px] text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
             />
           </div>
@@ -110,14 +135,14 @@ export function AddDebtModal({ isOpen, onClose, onSuccess }: AddDebtModalProps) 
             {/* Saldo Devedor Principal */}
             <div className="space-y-1">
               <label className="block font-semibold uppercase tracking-[0.08em] text-ink-3 text-[10px]">
-                Saldo Devedor (R$)
+                Saldo Devedor (€ / R$)
               </label>
               <input
                 type="text"
                 required
                 value={principalStr}
                 onChange={(e) => setPrincipalStr(e.target.value)}
-                placeholder="Ex: 45.000,00"
+                placeholder="Ex: 5.000,00"
                 className="w-full p-2.5 bg-paper border border-hairline rounded-[6px] text-xs font-mono text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
               />
             </div>
@@ -131,7 +156,7 @@ export function AddDebtModal({ isOpen, onClose, onSuccess }: AddDebtModalProps) 
                 type="text"
                 value={aprPercent}
                 onChange={(e) => setAprPercent(e.target.value)}
-                placeholder="Ex: 11.5"
+                placeholder="Ex: 8.5"
                 className="w-full p-2.5 bg-paper border border-hairline rounded-[6px] text-xs font-mono text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
               />
             </div>
@@ -141,13 +166,13 @@ export function AddDebtModal({ isOpen, onClose, onSuccess }: AddDebtModalProps) 
             {/* Parcela Mínima */}
             <div className="space-y-1">
               <label className="block font-semibold uppercase tracking-[0.08em] text-ink-3 text-[10px]">
-                Parcela Mensal Mínima (R$)
+                Parcela Mensal Mínima (€ / R$)
               </label>
               <input
                 type="text"
                 value={minPaymentStr}
                 onChange={(e) => setMinPaymentStr(e.target.value)}
-                placeholder="Ex: 850,00"
+                placeholder="Ex: 250,00"
                 className="w-full p-2.5 bg-paper border border-hairline rounded-[6px] text-xs font-mono text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-editorial"
               />
             </div>
