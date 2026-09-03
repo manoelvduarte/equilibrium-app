@@ -91,12 +91,23 @@ export default function LoginPage() {
       </div>
 
       {/* Right Column: Formulário de Autenticação */}
-      <div className="flex-1 flex flex-col justify-center items-center px-4 sm:px-8 py-12 md:py-16">
-        <div className="w-full max-w-[380px] space-y-6">
+      <div className="flex-1 flex flex-col justify-center items-center px-4 sm:px-8 py-8 md:py-16">
+        <div className="w-full max-w-[380px] space-y-5 sm:space-y-6">
           
+          {/* Mobile Couple Header Banner (<md) */}
+          <div className="md:hidden flex items-center gap-3 p-3 bg-surface border border-hairline rounded-[12px] shadow-xs">
+            <div className="w-11 h-11 rounded-full overflow-hidden border border-brand/40 shrink-0">
+              <img src="/couple/couple-home.jpg" alt="Manoel & Giovana" className="w-full h-full object-cover" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-display font-medium text-sm text-ink truncate">Manoel & Giovana</p>
+              <p className="text-[10px] text-ink-3 font-mono">Zero7Nove • Marco 07/09</p>
+            </div>
+          </div>
+
           {/* Brand Header */}
           <div className="space-y-2 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm shadow-xs">
+            <div className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm shadow-xs">
               <Heart className="w-4 h-4 text-brand fill-brand/20 stroke-brand" />
               <div className="flex items-baseline gap-1">
                 <span className="font-display tracking-tight font-semibold">Zero7Nove</span>

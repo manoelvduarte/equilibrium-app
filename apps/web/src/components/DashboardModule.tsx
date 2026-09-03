@@ -98,51 +98,51 @@ export function DashboardModule({
       />
 
       {/* 1. Faixa de KPIs: <sm = grid 2x2, >=md = 4 inline com hairline vertical */}
-      <section className="grid grid-cols-2 md:grid-cols-4 border-y border-hairline bg-paper divide-y md:divide-y-0 md:divide-x divide-hairline">
+      <section className="grid grid-cols-2 md:grid-cols-4 border-y border-hairline bg-paper divide-hairline">
         
         {/* KPI 1: Patrimônio Líquido */}
-        <div className="py-3 sm:py-4 px-3 sm:px-6">
-          <span className="micro-label text-[9px] sm:text-[10px]">Patrimônio Líquido</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
+        <div className="py-2.5 sm:py-4 px-2.5 sm:px-6 border-b md:border-b-0 border-r border-hairline min-w-0">
+          <span className="micro-label text-[8px] sm:text-[10px] truncate block">Patrimônio Líquido</span>
+          <p className="font-display text-lg xs:text-xl sm:text-2xl md:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
             {formatCentsToBRL(netWorthCents)}
           </p>
-          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Total consolidado</span>
+          <span className="text-[9px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Total consolidado</span>
         </div>
 
         {/* KPI 2: Receita do Mês */}
-        <div className="py-3 sm:py-4 px-3 sm:px-6">
-          <span className="micro-label text-[9px] sm:text-[10px]">Receita do Mês</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
+        <div className="py-2.5 sm:py-4 px-2.5 sm:px-6 border-b md:border-b-0 md:border-r border-hairline min-w-0">
+          <span className="micro-label text-[8px] sm:text-[10px] truncate block">Receita do Mês</span>
+          <p className="font-display text-lg xs:text-xl sm:text-2xl md:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
             {formatCentsToBRL(monthIncomeCents)}
           </p>
-          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Entradas confirmadas</span>
+          <span className="text-[9px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Entradas do mês</span>
         </div>
 
         {/* KPI 3: Despesas do Mês */}
-        <div className="py-3 sm:py-4 px-3 sm:px-6">
-          <span className="micro-label text-[9px] sm:text-[10px]">Despesas do Mês</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
+        <div className="py-2.5 sm:py-4 px-2.5 sm:px-6 border-r border-hairline min-w-0">
+          <span className="micro-label text-[8px] sm:text-[10px] truncate block">Despesas do Mês</span>
+          <p className="font-display text-lg xs:text-xl sm:text-2xl md:text-3xl font-medium tracking-tight text-ink mt-0.5 sm:mt-1 tnum truncate">
             {formatCentsToBRL(monthExpenseCents)}
           </p>
-          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Saídas computadas</span>
+          <span className="text-[9px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Saídas computadas</span>
         </div>
 
         {/* KPI 4: Taxa de Poupança */}
-        <div className="py-3 sm:py-4 px-3 sm:px-6">
-          <span className="micro-label text-[9px] sm:text-[10px]">Taxa de Poupança</span>
-          <p className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-brand mt-0.5 sm:mt-1 tnum truncate">
+        <div className="py-2.5 sm:py-4 px-2.5 sm:px-6 min-w-0">
+          <span className="micro-label text-[8px] sm:text-[10px] truncate block">Taxa de Poupança</span>
+          <p className="font-display text-lg xs:text-xl sm:text-2xl md:text-3xl font-medium tracking-tight text-brand mt-0.5 sm:mt-1 tnum truncate">
             {savingsRate}%
           </p>
-          <span className="text-[10px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Taxa de aporte conjunto</span>
+          <span className="text-[9px] sm:text-[11px] text-ink-3 mt-0.5 block truncate">Aporte conjunto</span>
         </div>
 
       </section>
 
       {/* 2. Grid de 12 Colunas (<lg: coluna única, gráfico primeiro, insights depois) */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-w-0">
         
         {/* Gráfico Principal de Evolução Patrimonial (Cols 1–8) */}
-        <div className="lg:col-span-8 bg-surface border border-hairline rounded-[12px] p-4 sm:p-6 shadow-sm space-y-4">
+        <div className="lg:col-span-8 bg-surface border border-hairline rounded-[12px] p-4 sm:p-6 shadow-sm space-y-4 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between border-b border-hairline pb-3">
             <div>
               <span className="micro-label text-[9px] sm:text-[10px]">Evolução Patrimonial</span>

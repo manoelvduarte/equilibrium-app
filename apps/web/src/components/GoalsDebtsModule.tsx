@@ -148,15 +148,15 @@ export function GoalsDebtsModule({ goals, debts, onRefresh }: GoalsDebtsModulePr
                 const isContributing = contributeGoalId === goal.id;
 
                 return (
-                  <div key={goal.id} className="p-4 bg-surface border border-hairline rounded-[12px] shadow-sm space-y-3">
-                    <div className="flex items-start justify-between text-xs">
-                      <div>
-                        <span className="font-medium text-ink text-sm block">{goal.name}</span>
+                  <div key={goal.id} className="p-3.5 sm:p-4 bg-surface border border-hairline rounded-[12px] shadow-sm space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 text-xs">
+                      <div className="min-w-0">
+                        <span className="font-medium text-ink text-sm block truncate">{goal.name}</span>
                         {goal.deadline && (
                           <span className="text-[10px] text-ink-3">Prazo estimado: {goal.deadline}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                         <span className="font-mono tnum font-semibold text-ink">
                           {formatCentsToBRL(goal.current_cents)} <span className="text-ink-3 font-normal">/ {formatCentsToBRL(goal.target_cents)}</span>
                         </span>
@@ -272,21 +272,21 @@ export function GoalsDebtsModule({ goals, debts, onRefresh }: GoalsDebtsModulePr
                 const isAmortizing = amortizeDebtId === debt.id;
 
                 return (
-                  <div key={debt.id} className="p-4 bg-surface border border-hairline rounded-[12px] shadow-sm space-y-3">
-                    <div className="flex items-start justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-surface-2 border border-hairline flex items-center justify-center font-mono font-bold text-[10px] text-ink-3">
+                  <div key={debt.id} className="p-3.5 sm:p-4 bg-surface border border-hairline rounded-[12px] shadow-sm space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-5 h-5 rounded-full bg-surface-2 border border-hairline flex items-center justify-center font-mono font-bold text-[10px] text-ink-3 shrink-0">
                           #{index + 1}
                         </span>
-                        <div>
-                          <span className="font-medium text-ink text-sm block">{debt.name}</span>
-                          <span className="text-[10px] text-ink-3">
+                        <div className="min-w-0">
+                          <span className="font-medium text-ink text-sm block truncate">{debt.name}</span>
+                          <span className="text-[10px] text-ink-3 truncate block">
                             Juros: {(debt.interest_rate_permille / 10).toFixed(1)}% a.a. | Mínimo: {formatCentsToBRL(debt.minimum_payment_cents)}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                         <span className="font-mono font-semibold text-danger tnum text-sm">
                           {formatCentsToBRL(debt.principal_cents)}
                         </span>

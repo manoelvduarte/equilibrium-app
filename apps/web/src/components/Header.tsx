@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { formatCentsToCurrency } from '@equilibrium/ui';
-import { Scale, Plus, Command, Moon, Sun, UserPlus, LogOut, Bell, Heart, Coins } from 'lucide-react';
+import { Plus, Command, Moon, Sun, UserPlus, LogOut, Bell, Heart, ChevronDown } from 'lucide-react';
 import { Profile, Category, Transaction, Budget, Goal, Debt } from '@/hooks/useHouseholdData';
 import { NotificationsModal } from './notifications/NotificationsModal';
 
@@ -39,6 +39,8 @@ export function Header({
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currency, setCurrency] = useState<'EUR' | 'BRL'>('EUR');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -59,6 +61,17 @@ export function Header({
     }
   }, []);
 
+  // Fechar menu de usuário ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleTheme = () => {
     const nextDark = !isDarkMode;
     setIsDarkMode(nextDark);
@@ -74,7 +87,6 @@ export function Header({
   const handleCurrencyChange = (curr: 'EUR' | 'BRL') => {
     setCurrency(curr);
     localStorage.setItem('zero7nove-currency', curr);
-    // Dispara evento customizado para atualizar formatadores da página se necessário
     window.dispatchEvent(new CustomEvent('currency-change', { detail: curr }));
   };
 
@@ -85,29 +97,32 @@ export function Header({
   };
 
   return (
-    <header className="border-b border-hairline bg-paper/95 backdrop-blur-sm sticky top-0 z-40 px-3 sm:px-6 py-2.5 sm:py-3.5">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4">
+    <header className="border-b border-hairline bg-paper/95 backdrop-blur-sm sticky top-0 z-40 px-3 sm:px-6 py-2 sm:py-3">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4">
         
-        {/* Row 1 (<md) or Left Side (>=md): Brand Zero7Nove, Nossas Contas & Controls */}
-        <div className="flex items-center justify-between gap-3 w-full md:w-auto">
+        {/* Row 1 (<md) or Left Side (>=md): Brand, Currency & Mobile Menu */}
+        <div className="flex items-center justify-between gap-2 w-full md:w-auto">
+          
+          {/* Brand Zero7Nove */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-surface border border-hairline rounded-[6px] text-ink font-bold text-sm sm:text-base shadow-xs">
-              <Heart className="w-4 h-4 text-brand fill-brand/20 stroke-brand stroke-[2]" />
+              <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand fill-brand/20 stroke-brand stroke-[2]" />
               <div className="flex items-baseline gap-1">
                 <span className="font-display tracking-tight text-ink font-semibold">Zero7Nove</span>
                 <span className="font-mono text-[9px] text-ink-3 font-normal">07•09</span>
               </div>
             </div>
 
-            {/* Tag Nossas Contas */}
-            <div className="flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-surface-2 border border-hairline rounded-[4px] text-[11px] sm:text-xs text-ink-2">
+            {/* Desktop Tag Nossas Contas */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-surface-2 border border-hairline rounded-[4px] text-xs text-ink-2">
               <span className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0 animate-pulse"></span>
               <span className="font-medium text-ink">Nossas Contas</span>
             </div>
           </div>
 
-          {/* User Controls on Mobile (Right of Row 1) */}
-          <div className="flex md:hidden items-center gap-1.5">
+          {/* User Controls on Mobile (<md) */}
+          <div className="flex md:hidden items-center gap-1.5 relative" ref={menuRef}>
+            
             {/* Currency Selector Mobile */}
             <div className="flex items-center p-0.5 bg-surface-2 border border-hairline rounded-[6px] text-[10px] font-mono">
               <button
@@ -128,9 +143,10 @@ export function Header({
               </button>
             </div>
 
+            {/* Notifications Bell */}
             <button
               onClick={() => setIsNotificationsOpen(true)}
-              className="p-1.5 text-ink-2 hover:text-ink bg-surface border border-hairline rounded-[4px] relative"
+              className="p-1.5 text-ink-2 hover:text-ink bg-surface border border-hairline rounded-[6px] relative cursor-pointer"
               title="Notificações e Alertas"
               aria-label="Notificações e Alertas"
             >
@@ -138,51 +154,75 @@ export function Header({
               <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-brand rounded-full" />
             </button>
 
+            {/* Avatar Button / Menu Trigger */}
             <button
-              onClick={onOpenInvite}
-              className="p-1 text-ink-2 hover:text-ink bg-surface border border-hairline rounded-[4px]"
-              title="Convidar parceiro"
-              aria-label="Convidar parceiro"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="flex items-center gap-1 p-0.5 bg-surface border border-hairline rounded-full cursor-pointer hover:border-brand transition-editorial"
+              aria-label="Menu do Casal"
             >
-              <UserPlus className="w-3.5 h-3.5 stroke-[1.5]" />
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-brand/40 shadow-xs flex items-center justify-center bg-surface-2">
+                <img
+                  src="/couple/couple-home.jpg"
+                  alt="Manoel & Giovana"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <ChevronDown className="w-3 h-3 text-ink-3 mr-0.5" />
             </button>
 
-            <button
-              onClick={toggleTheme}
-              className="p-1 text-ink-2 hover:text-ink bg-surface border border-hairline rounded-[4px]"
-              aria-label="Alternar Tema Claro/Escuro"
-            >
-              {isDarkMode ? <Sun className="w-3.5 h-3.5 text-warning stroke-[1.5]" /> : <Moon className="w-3.5 h-3.5 stroke-[1.5]" />}
-            </button>
+            {/* Mobile Dropdown Popover */}
+            {isUserMenuOpen && (
+              <div className="absolute right-0 top-9 w-52 bg-surface border border-hairline rounded-[10px] shadow-lg p-2 z-50 text-xs space-y-1 animate-in fade-in-50 duration-150">
+                <div className="px-2.5 py-1.5 border-b border-hairline">
+                  <p className="font-semibold text-ink truncate">Manoel & Giovana</p>
+                  <p className="text-[10px] text-ink-3 font-mono">Marco 07/09</p>
+                </div>
 
-            {/* Foto do Casal no Mobile */}
-            <div
-              className="w-6 h-6 rounded-full overflow-hidden border border-brand/40 shadow-xs flex items-center justify-center bg-surface-2 ml-1"
-              title={userProfile?.full_name || 'Manoel & Amor'}
-            >
-              <img
-                src="/couple/couple-home.jpg"
-                alt="Casal"
-                className="w-full h-full object-cover"
-              />
-            </div>
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    onOpenInvite();
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-ink hover:bg-surface-2 transition-editorial text-left cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5 text-brand" />
+                  <span>Convidar Parceiro</span>
+                </button>
 
-            <button
-              onClick={handleLogout}
-              className="p-1 text-ink-3 hover:text-danger rounded-[4px]"
-              title="Sair"
-              aria-label="Sair"
-            >
-              <LogOut className="w-3.5 h-3.5 stroke-[1.5]" />
-            </button>
+                <button
+                  onClick={() => {
+                    toggleTheme();
+                    setIsUserMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-ink hover:bg-surface-2 transition-editorial text-left cursor-pointer"
+                >
+                  {isDarkMode ? <Sun className="w-3.5 h-3.5 text-warning" /> : <Moon className="w-3.5 h-3.5 text-ink-2" />}
+                  <span>{isDarkMode ? 'Modo Claro' : 'Modo Escuro'}</span>
+                </button>
+
+                <div className="border-t border-hairline pt-1">
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-danger hover:bg-danger/10 transition-editorial text-left cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sair da Conta</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 
-        {/* Row 2 (<md) or Right Side (>=md): Net worth, Quick Add, Currency & Transactions */}
+        {/* Row 2 (<md) or Right Side (>=md): Net Worth, Actions & Desktop Controls */}
         <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto pt-1 md:pt-0 border-t md:border-t-0 border-hairline/60">
           
-          {/* Net Worth Summary Badge */}
-          <div className="flex items-center md:flex-col md:items-end gap-1.5 md:gap-0 px-2.5 py-1 bg-surface border border-hairline rounded-[6px]">
+          {/* Net Worth Badge */}
+          <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-surface border border-hairline rounded-[6px] shrink-0">
             <span className="micro-label text-[9px] sm:text-[10px]">Patrimônio:</span>
             <span className="text-xs font-semibold font-mono text-ink tnum">
               {formatCentsToCurrency(netWorthCents, currency)}
@@ -216,11 +256,11 @@ export function Header({
             {/* Quick-Add Button (⌘K) */}
             <button
               onClick={onOpenQuickAdd}
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline rounded-[6px] text-xs font-medium text-ink transition-editorial cursor-pointer shadow-sm"
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 bg-surface hover:bg-surface-2 border border-hairline rounded-[6px] text-xs font-medium text-ink transition-editorial cursor-pointer shadow-xs"
               title="Adicionar rápido (⌘K)"
             >
-              <span className="hidden sm:inline">Adicionar</span>
-              <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[10px] font-mono text-ink-3">
+              <span className="hidden xs:inline sm:inline">Adicionar</span>
+              <kbd className="inline-flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 bg-surface-2 border border-hairline rounded-[4px] text-[9px] sm:text-[10px] font-mono text-ink-3">
                 <Command className="w-2.5 h-2.5" /> K
               </kbd>
             </button>
@@ -228,10 +268,10 @@ export function Header({
             {/* New Transaction Button */}
             <button
               onClick={onOpenNewTransaction}
-              className="flex items-center gap-1 px-3 sm:px-3.5 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial cursor-pointer shadow-sm"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial cursor-pointer shadow-xs shrink-0"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span className="hidden sm:inline">Transação</span>
+              <span>Transação</span>
             </button>
 
             {/* Desktop-only Notification, Invite, Theme & Couple Avatar */}
@@ -267,11 +307,11 @@ export function Header({
               {/* Foto do Casal no Desktop */}
               <div
                 className="w-7 h-7 rounded-full overflow-hidden border border-brand/40 shadow-xs flex items-center justify-center bg-surface-2"
-                title={userProfile?.full_name || 'Manoel & Amor'}
+                title="Manoel & Giovana"
               >
                 <img
                   src="/couple/couple-home.jpg"
-                  alt="Casal"
+                  alt="Manoel & Giovana"
                   className="w-full h-full object-cover"
                 />
               </div>

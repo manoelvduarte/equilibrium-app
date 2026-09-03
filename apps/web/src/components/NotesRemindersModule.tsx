@@ -161,20 +161,20 @@ export function NotesRemindersModule({ userProfile, partners }: NotesRemindersMo
             Notas, Acordos & Lembretes
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsNoteModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand/90 text-paper rounded-[6px] font-semibold text-xs transition-editorial shadow-sm cursor-pointer shrink-0"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Nova Nota / Acordo</span>
+            <span>Nova Nota</span>
           </button>
           <button
             onClick={() => setIsBillModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline text-ink rounded-[6px] font-medium text-xs transition-editorial shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-surface-2 border border-hairline text-ink rounded-[6px] font-medium text-xs transition-editorial shadow-sm cursor-pointer shrink-0"
           >
             <Calendar className="w-3.5 h-3.5 text-brand" />
-            <span>Novo Lembrete de Conta</span>
+            <span>Novo Lembrete</span>
           </button>
         </div>
       </div>

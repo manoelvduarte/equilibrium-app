@@ -68,15 +68,15 @@ export default function HomePage() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-4 sm:space-y-6 overflow-x-hidden">
         
         {/* Navigation Tabs */}
-        <nav className="flex items-center gap-1 border-b border-hairline pb-2 overflow-x-auto text-xs no-scrollbar">
+        <nav className="flex items-center gap-1.5 border-b border-hairline pb-2 overflow-x-auto text-xs no-scrollbar touch-pan-x -mx-3 px-3 sm:mx-0 sm:px-0">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'dashboard'
-                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                ? 'bg-surface text-ink border border-hairline shadow-xs font-semibold'
                 : 'text-ink-2 hover:text-ink hover:bg-surface-2'
             }`}
           >
@@ -86,9 +86,9 @@ export default function HomePage() {
 
           <button
             onClick={() => setActiveTab('transactions')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'transactions'
-                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                ? 'bg-surface text-ink border border-hairline shadow-xs font-semibold'
                 : 'text-ink-2 hover:text-ink hover:bg-surface-2'
             }`}
           >
@@ -103,9 +103,9 @@ export default function HomePage() {
 
           <button
             onClick={() => setActiveTab('budget')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'budget'
-                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                ? 'bg-surface text-ink border border-hairline shadow-xs font-semibold'
                 : 'text-ink-2 hover:text-ink hover:bg-surface-2'
             }`}
           >
@@ -115,9 +115,9 @@ export default function HomePage() {
 
           <button
             onClick={() => setActiveTab('goals')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'goals'
-                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                ? 'bg-surface text-ink border border-hairline shadow-xs font-semibold'
                 : 'text-ink-2 hover:text-ink hover:bg-surface-2'
             }`}
           >
@@ -127,9 +127,9 @@ export default function HomePage() {
 
           <button
             onClick={() => setActiveTab('notes')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] font-medium transition-editorial cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'notes'
-                ? 'bg-surface text-ink border border-hairline shadow-sm'
+                ? 'bg-surface text-ink border border-hairline shadow-xs font-semibold'
                 : 'text-ink-2 hover:text-ink hover:bg-surface-2'
             }`}
           >

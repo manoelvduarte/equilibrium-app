@@ -272,7 +272,46 @@ export function TransactionsModule({
         </div>
       ) : (
         <div className="bg-surface border border-hairline rounded-[12px] overflow-hidden shadow-sm">
-          <div className="overflow-x-auto -mx-1 sm:mx-0">
+          
+          {/* Mobile Card List (<md) */}
+          <div className="md:hidden divide-y divide-hairline">
+            {filteredTransactions.map((tx) => (
+              <div key={tx.id} className="p-3 sm:p-4 flex items-center justify-between gap-2.5 hover:bg-surface-2 transition-editorial">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-surface-2 border border-hairline flex items-center justify-center shrink-0">
+                    <CategoryIcon name={tx.category?.icon || 'tag'} size={13} className="text-ink-2" />
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-xs font-semibold text-ink truncate leading-tight">{tx.description}</p>
+                    <div className="flex items-center gap-1.5 text-[10px] text-ink-3 font-mono">
+                      <span>{formatRelativeDate(tx.occurred_at)}</span>
+                      <span>•</span>
+                      <span className="truncate">{tx.category?.name || 'Geral'}</span>
+                      <span>•</span>
+                      <span className="truncate">{tx.account?.name || 'Principal'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`font-mono font-semibold text-xs tnum ${tx.type === 'income' ? 'text-brand' : 'text-danger'}`}>
+                    {tx.type === 'income' ? '+' : '−'}{formatCentsToBRL(tx.amount_cents)}
+                  </span>
+                  <button
+                    onClick={() => handleDelete(tx)}
+                    className="p-1 text-ink-3 hover:text-danger rounded-[4px] cursor-pointer"
+                    title="Excluir transação"
+                    aria-label="Excluir"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View (>=md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[580px]">
               <thead>
                 <tr className="border-b border-hairline bg-surface-2/60 text-ink-3">

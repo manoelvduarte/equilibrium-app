@@ -99,10 +99,10 @@ export function BudgetModule({
         </div>
 
         {/* Global Progress Strip */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center text-xs font-mono text-ink">
+        <div className="space-y-1.5 pt-1">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs font-mono text-ink">
             <span className="text-ink-2">Total Comprometido no Mês:</span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-semibold">{formatCentsToBRL(totalBudgetSpent)}</span>
               <span className="text-ink-3">/</span>
               <span className="text-ink-2">{formatCentsToBRL(totalBudgetLimit)}</span>
